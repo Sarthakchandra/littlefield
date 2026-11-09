@@ -155,6 +155,22 @@ def parse_plot(h: str) -> dict:
     return out
 
 
+def parse_orders_form(h: str):
+    """Live OrdersForm (the 'edit data' window): maxwip text, lotCount and contractOpt radios."""
+    wip = (re.search(r"name=['\"]?maxwip['\"]?[^>]*value=['\"]?(\d+)", h)
+           or re.search(r"value=['\"]?(\d+)['\"]?[^>]*name=['\"]?maxwip", h))
+    def checked(name):
+        for tag in re.findall(r"<input[^>]*>", h, re.I):
+            if re.search(rf"name=['\"]?{name}\b", tag) and re.search(r"\bchecked\b", tag, re.I):
+                v = re.search(r"value=['\"]?(\w+)", tag)
+                return v.group(1) if v else None
+        return None
+    if not re.search(r"name=['\"]?contractOpt\b", h):
+        return None
+    return {"maxwip": wip.group(1) if wip else "300", "lotCount": checked("lotCount") or "1",
+            "contractOpt": checked("contractOpt") or "1"}
+
+
 def parse_cash(h: str):
     t = _text(h)
     debt = re.search(r"Debt\s*(-?[\d,]+(?:\.\d+)?)", t)
@@ -162,6 +178,8 @@ def parse_cash(h: str):
     m = re.search(r"\(\s*[\"']([^\"']+)[\"'][^)]*[\"']MOREDEBT[\"']", h)
     if m:
         loan_url = m.group(1)
+    elif "LoanForm" in h:
+        loan_url = "LoanForm"   # live game: window.open('LoanForm') with amount + submit=increase/decrease
     return dict(debt=_num(debt.group(1)) if debt else 0.0, loan_url=loan_url)
 
 
@@ -206,7 +224,11 @@ class LittlefieldClient:
     def snapshot(self, with_plots=True) -> Snapshot:
         day, cash, team = parse_status(self.get("LTStatus"))
         cs = parse_cash(self.get(f"CashStatus?team={self.team}"))
-        o = parse_orders(self.get("OrdersMenu"))
+        om = self.get("OrdersMenu")
+        o = parse_orders(om)
+        self.orders_form = None
+        if "OrdersForm" in om:
+            self.orders_form = parse_orders_form(self.get("OrdersForm"))
         if o["running_day"] is not None:
             day = o["running_day"]          # LTStatus shows whole days only
         m = parse_material(self.get("MaterialMenu"))
@@ -216,6 +238,9 @@ class LittlefieldClient:
             key = {"updateContractValue": "contract", "updateLotSizeValue": "lots",
                    "updateMaximumWipLimitValue": "wip"}.get(c.fn, c.fn)
             controls[key] = c
+        if self.orders_form:
+            for key, field_ in (("wip", "maxwip"), ("lots", "lotCount"), ("contract", "contractOpt")):
+                controls[key] = Control(fn="form", url="OrdersForm", current=self.orders_form[field_], trans=field_)
         for c in m["controls"]:
             controls["rop" if "POINT" in c.trans.upper() else "roq"] = c
         for k, v in st.items():
@@ -241,6 +266,14 @@ class LittlefieldClient:
     def submit(self, control: Control, value) -> str:
         """POST a change exactly as the page's confirm dialog does."""
         time.sleep(self.pause)
+        if control.fn == "form":   # OrdersForm: post every field, with this one changed
+            self.orders_form[control.trans] = str(value)
+            data = dict(self.orders_form, submit="ok")
+            r = self.s.post(f"{self.base}/Littlefield/{control.url}", data=data, timeout=self.timeout)
+            r.raise_for_status()
+            if "Error" in r.text or "log in" in r.text:
+                raise GameError(_text(r.text)[:200])
+            return f"{control.trans}={value}"
         body = f"trans={control.trans},{value}&pwd={requests.utils.quote(self.password, safe='')}&submit=confirm"
         r = self.s.post(f"{self.base}/Littlefield/{control.url}", data=body, timeout=self.timeout,
                         headers={"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
