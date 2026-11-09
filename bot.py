@@ -87,6 +87,29 @@ def to_obs(snap) -> Observation:
         can_edit_orders=can_edit, debt=snap.debt)
 
 
+def kpis(snap) -> str:
+    """Yesterday's numbers from the game's own plots, for the log."""
+    def last(key):
+        ser = snap.series.get(key) or {}
+        return ser[max(ser)] if ser else None
+    out = []
+    jobs = sum(v for k, v in ((k, last(k)) for k in snap.series if k.startswith("JOBOUT")) if v)
+    out.append(f"done {jobs:.0f}/d")
+    for c in (1, 2, 3):
+        lt, rev, n = last(f"JOBT_c{c}"), last(f"JOBREV_c{c}"), last(f"JOBOUT_c{c}")
+        if n:
+            out.append(f"c{c} lt {lt * 24:.1f}h rev ${rev:,.0f}")
+    q = sum((last(f"S{k}Q") or 0) for k in (1, 2, 3)) / 60
+    out.append(f"queued {q:.0f} jobs")
+    a = last("JOBIN")
+    if a is not None:
+        out.append(f"accepted {a:.0f}/d")
+    u = [last(f"S{k}UTIL") for k in (1, 2, 3)]
+    if all(x is not None for x in u):
+        out.append("util " + "/".join(f"{x:.2f}" for x in u))
+    return " ".join(out)
+
+
 def guard(acts, obs, cfg):
     """Hard limits that hold whatever the policy says."""
     ok, spend = [], 0
@@ -160,7 +183,7 @@ def main(client=None, now=None) -> int:
         head = (f"{ts} day {snap.day:.1f} cash ${snap.cash:,.0f} debt ${snap.debt:,.0f} "
                 f"machines {snap.machines} on-order {snap.on_order} inv {snap.inventory} "
                 f"rop/roq {snap.rop}/{snap.roq} contract {snap.contract} wip {snap.wip_limit} "
-                f"rule {snap.rule} edits={'on' if obs.can_edit_orders else 'OFF'}")
+                f"rule {snap.rule} edits={'on' if obs.can_edit_orders else 'OFF'} | {kpis(snap)}")
         lines.append(head)
         if snap.day >= cfg.get("stop_after_day", 299.5):
             lines.append("  game over or about to end: no actions")
