@@ -180,7 +180,9 @@ def parse_cash(h: str):
         loan_url = m.group(1)
     elif "LoanForm" in h:
         loan_url = "LoanForm"   # live game: window.open('LoanForm') with amount + submit=increase/decrease
-    return dict(debt=_num(debt.group(1)) if debt else 0.0, loan_url=loan_url)
+    onhand = re.search(r"Cash on Hand\s*(-?[\d,]+(?:\.\d+)?)", t)
+    return dict(debt=_num(debt.group(1)) if debt else 0.0, loan_url=loan_url,
+                cash_on_hand=_num(onhand.group(1)) if onhand else None)
 
 
 def parse_forms(h: str):
@@ -246,6 +248,8 @@ class LittlefieldClient:
             self.orders_form = parse_orders_form(self.get("OrdersForm"))
         if o["running_day"] is not None:
             day = o["running_day"]          # LTStatus shows whole days only
+        if cs.get("cash_on_hand") is not None:
+            cash = cs["cash_on_hand"]       # LTStatus "Cash Balance" is cash minus debt
         m = parse_material(self.get("MaterialMenu"))
         st = {k: parse_station(self.get(f"StationMenu?id={k}")) for k in (1, 2, 3)}
         controls = {}
