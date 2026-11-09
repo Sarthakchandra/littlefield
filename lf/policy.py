@@ -76,6 +76,11 @@ DEFAULTS = dict(
     final_sale_day=299.5,
     wave_only=True,
     day50_wave=None,           # e.g. {1: 4, 2: 5, 3: 2}: fixed first purchase instead of the rule
+    c3_mode=False,             # split lots and run contract 3 (6h quote) after the flush
+    target_lots=5,             # lots per job in c3 mode (5 x 12 kits: no-wait flow ~4.3h)
+    c3_lt=0.27,                # switch to c3 when predicted lead time (days) is at or below this
+    c3_revert_lt=0.33,         # c3 pays $1,000 at 8h; above that c2 is better
+    c3_wip_days=0.22,          # WIP cap = throughput x this in c3 mode
     hold_after_day=55,
     no_edit_mode="hold",       # if contract/WIP can't be edited: "hold" cash or "invest" anyway
 )
@@ -158,6 +163,8 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
     d = obs.day
     lots = obs.lots_per_job
     h = {k: hours_per_job(k, lots) for k in (1, 2, 3)}
+    plan_lots = cfg["target_lots"] if cfg["c3_mode"] else lots
+    hp = {k: hours_per_job(k, plan_lots) for k in (1, 2, 3)}
     u = cfg["util_target"]
     s = obs.series
 
@@ -178,25 +185,35 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
     # ---- contract + WIP cap (Little's law: lead time = WIP / throughput)
     contract = obs.contract
     eff = {k: obs.machines[k] + obs.on_order.get(k, 0) for k in (1, 2, 3)}
-    mu = min(eff[k] * 24 / h[k] for k in (1, 2, 3))            # jobs/day once orders land
-    mu_now = min(obs.machines[k] * 24 / h[k] for k in (1, 2, 3))
-    flow = sum(h.values()) / 24                                  # no-wait flow time, days
+    mu = min(eff[k] * 24 / hp[k] for k in (1, 2, 3))           # jobs/day once orders land
+    mu_now = min(obs.machines[k] * 24 / hp[k] for k in (1, 2, 3))
+    size = 60 // plan_lots
+    flow = (SETUP[1] + PER_UNIT[1] * size + 2 * PER_UNIT[2] * size * CALIB[2] + SETUP[3] + PER_UNIT[3] * size) / 24
     lt_new = max(flow, wip_jobs / max(mu_now, 0.1))
     if obs.can_edit_orders:
         # cap WIP so a new job's lead time stays inside the c2 quote. When demand
         # beats capacity this rejects the excess instead of letting every job go late.
-        cap = int(max(cfg["min_wip"], round(mu_now * cfg["wip_days"])))
+        wd = cfg["c3_wip_days"] if cfg["c3_mode"] else cfg["wip_days"]
+        cap = int(max(cfg["min_wip"], round(mu_now * wd)))
         if cfg["sell_mode"] == "final" and d >= cfg["stop_accept_day"]:
             cap = 1   # nothing accepted now can finish by day 300
         if abs(cap - obs.wip_limit) >= max(2, 0.12 * obs.wip_limit):
             acts.append(Action("wip", cap, reason=f"μ {mu_now:.1f} jobs/d x {cfg['wip_days']}d"))
-        if contract != 2 and lt_new <= cfg["c2_switch_lt"]:
+        if cfg["c3_mode"] and obs.lots_per_job != plan_lots:
+            acts.append(Action("lots", plan_lots, reason=f"{60 // plan_lots}-kit lots: flow {flow * 24:.1f}h fits the 6h quote"))
+        if cfg["c3_mode"] and contract != 3 and lt_new <= cfg["c3_lt"]:
+            contract = 3
+            acts.append(Action("contract", 3, reason=f"pred lead {lt_new * 24:.1f}h"))
+        elif cfg["c3_mode"] and contract == 3 and lt_new > cfg["c3_revert_lt"]:
+            contract = 2
+            acts.append(Action("contract", 2, reason=f"pred lead {lt_new * 24:.1f}h, c2 pays more past 8h"))
+        elif contract == 1 and lt_new <= cfg["c2_switch_lt"]:
             contract = 2
             acts.append(Action("contract", 2, reason=f"backlog flushed, pred lead {lt_new:.2f}d"))
         elif contract == 2 and lt_new > cfg["c2_revert_lt"]:
             contract = 1
             acts.append(Action("contract", 1, reason=f"pred lead {lt_new:.2f}d, c1 pays more"))
-    target_contract = 2 if obs.can_edit_orders else contract
+    target_contract = (3 if cfg["c3_mode"] else 2) if obs.can_edit_orders else contract
     margin = CONTRACTS[target_contract]["rev"] - 60 * obs.kit_unit - 60 * 1.5 * cfg["holding_per_kit_day"]
 
     # ---- capacity
@@ -214,10 +231,10 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
         spend_left = min(cfg["max_spend_per_run"], spend_left + upfront)
     want = {}
     for k in (1, 2, 3):
-        steady = lam_plan * h[k] / (24 * u)
+        steady = lam_plan * hp[k] / (24 * u)
         flush = backlog_h[k] / (24 * cfg["flush_days"]) / u if cfg["backlog_term"] else 0.0
         need = math.ceil(steady + flush - 1e-9)
-        life_need = math.ceil(lam_life * h[k] / (24 * u) + 1e-9)
+        life_need = math.ceil(lam_life * hp[k] / (24 * u) + 1e-9)
         need = min(need, life_need + 1, cfg["max_machines"])
         want[k] = max(1, need)
 
@@ -226,7 +243,7 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
         if not obs.can_edit_orders:
             return True   # no WIP cap to shed excess demand: any shortage makes every job late
         price, salvage = PRICES[k]
-        per_day = (24 * u / h[k]) * margin
+        per_day = (24 * u / hp[k]) * margin
         return per_day * rem >= cfg["min_payback_mult"] * (price - salvage)
 
     buys = []
@@ -243,9 +260,9 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
         if not cands:
             break
         if cfg["buy_order"] == "binding":
-            k = min(cands, key=lambda k: (eff[k] + alloc[k]) * 24 / h[k])
+            k = min(cands, key=lambda k: (eff[k] + alloc[k]) * 24 / hp[k])
         else:
-            k = max(cands, key=lambda k: (lam_plan * h[k] + backlog_h[k] / cfg["flush_days"]) /
+            k = max(cands, key=lambda k: (lam_plan * hp[k] + backlog_h[k] / cfg["flush_days"]) /
                     (24 * (eff[k] + alloc[k])))
         price = PRICES[k][0]
         if spend_left < price:
