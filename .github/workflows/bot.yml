@@ -2,13 +2,13 @@ name: littlefield-bot
 
 on:
   schedule:
-    - cron: "*/10 * * * *"      # every ~10 min (GitHub may delay a few min); 1 sim day = ~29 min
+    - cron: "*/10 * * * *"   # every ~10 min; 1 sim day = ~29 min
   workflow_dispatch:
     inputs:
       dry_run:
         description: "Decide and log only, change nothing"
         type: boolean
-        default: true
+        default: false
 
 concurrency:
   group: littlefield-bot
