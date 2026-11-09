@@ -1,0 +1,8 @@
+2026-11-09T12:50:37+00:00 ERROR login failed:  Littlefield Invalid team id or password! Please provide your team id and password on login page 
+Traceback (most recent call last):
+  File "/home/runner/work/littlefield/littlefield/bot.py", line 133, in main
+    client.login()
+  File "/home/runner/work/littlefield/littlefield/lf/client.py", line 183, in login
+    raise GameError("login failed: " + _text(r.text)[:200])
+lf.client.GameError: login failed:  Littlefield Invalid team id or password! Please provide your team id and password on login page 
+
