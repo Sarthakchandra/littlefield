@@ -183,6 +183,21 @@ def parse_cash(h: str):
     return dict(debt=_num(debt.group(1)) if debt else 0.0, loan_url=loan_url)
 
 
+def parse_forms(h: str):
+    """All <form>s in a page: [(action, method, [(name, type, value)])]."""
+    out = []
+    for fm in re.finditer(r"<form([^>]*)>([\s\S]*?)</form>", h, re.I):
+        attrs, body = fm.group(1), fm.group(2)
+        act = re.search(r"action=['\"]?([^'\" >]+)", attrs, re.I)
+        met = re.search(r"method=['\"]?(\w+)", attrs, re.I)
+        inputs = []
+        for tag in re.findall(r"<input[^>]*>", body, re.I):
+            g = lambda a: (re.search(rf"\b{a}=['\"]?([^'\">]*?)['\"]?(?=\s|>|/)", tag, re.I) or [None, ""])[1]
+            inputs.append((g("name"), (g("type") or "text").lower(), g("value")))
+        out.append((act.group(1) if act else "", (met.group(1) if met else "get").lower(), inputs))
+    return out
+
+
 class LittlefieldClient:
     def __init__(self, team: str, password: str, base: str = "https://op2.responsive.net",
                  institution: str = "iimb", timeout: float = 30.0, pause: float = 0.3):
@@ -271,9 +286,7 @@ class LittlefieldClient:
             data = dict(self.orders_form, submit="ok")
             r = self.s.post(f"{self.base}/Littlefield/{control.url}", data=data, timeout=self.timeout)
             r.raise_for_status()
-            if "Error" in r.text or "log in" in r.text:
-                raise GameError(_text(r.text)[:200])
-            return f"{control.trans}={value}"
+            return self._confirm(r.text)
         body = f"trans={control.trans},{value}&pwd={requests.utils.quote(self.password, safe='')}&submit=confirm"
         r = self.s.post(f"{self.base}/Littlefield/{control.url}", data=body, timeout=self.timeout,
                         headers={"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -291,6 +304,39 @@ class LittlefieldClient:
                         data=f"submit={kind}&{kind}string={kind}&amount={int(amount)}", timeout=self.timeout,
                         headers={"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
         r.raise_for_status()
-        if "Error" in r.text:
-            raise GameError(_text(r.text)[:200])
-        return _text(r.text)[:200]
+        return self._confirm(r.text)
+
+    def _confirm(self, page: str, depth: int = 0) -> str:
+        """The live forms answer with a 'Please confirm' page holding a password
+        box. Fill every field the page carries, add the password, press confirm."""
+        txt = _text(page)
+        if re.search(r"\berror\b|incorrect|invalid|not allowed|insufficient", txt, re.I) and "confirm" not in txt.lower():
+            raise GameError(txt[:200])
+        if depth >= 2 or not re.search(r"confirm", txt, re.I):
+            return txt[-200:]
+        for action, method, inputs in parse_forms(page):
+            if not any(t == "password" for _, t, _ in inputs) and not any(
+                    t == "submit" and re.search(r"confirm|ok|yes", v or "", re.I) for _, t, v in inputs):
+                continue
+            data, chose = {}, False
+            for name, typ, val in inputs:
+                if not name:
+                    continue
+                if typ == "password":
+                    data[name] = self.password
+                elif typ == "submit":
+                    if not chose and re.search(r"confirm|ok|yes", (val or "") + name, re.I):
+                        data[name] = val
+                        chose = True
+                elif typ in ("hidden", "text", "number"):
+                    if re.search(r"cancel", name + (val or ""), re.I):
+                        continue
+                    data[name] = val
+                elif typ in ("radio", "checkbox"):
+                    pass
+            url = action.lstrip("/").removeprefix("Littlefield/") or "LoanForm"
+            time.sleep(self.pause)
+            r = self.s.post(f"{self.base}/Littlefield/{url}", data=data, timeout=self.timeout)
+            r.raise_for_status()
+            return self._confirm(r.text, depth + 1)
+        return txt[-200:]
