@@ -103,7 +103,9 @@ def parse_orders(h: str):
     lot = re.search(r"Lot size:\s*([\d,]+)\s*kits,\s*or\s*(\d+)\s*lots? per job", t)
     con = re.search(r"Current contract:\s*(\d+)", t)
     controls = parse_controls(h)
+    rd = re.search(r"id=.currentRunningDay.[^>]*value=.([\d.]+)", h)
     return dict(
+        running_day=float(rd.group(1)) if rd else None,
         wip_limit=int(_num(wip.group(1))) if wip else 300,
         lots_per_job=int(lot.group(2)) if lot else 1,
         contract=int(con.group(1)) if con else 1,
@@ -205,6 +207,8 @@ class LittlefieldClient:
         day, cash, team = parse_status(self.get("LTStatus"))
         cs = parse_cash(self.get(f"CashStatus?team={self.team}"))
         o = parse_orders(self.get("OrdersMenu"))
+        if o["running_day"] is not None:
+            day = o["running_day"]          # LTStatus shows whole days only
         m = parse_material(self.get("MaterialMenu"))
         st = {k: parse_station(self.get(f"StationMenu?id={k}")) for k in (1, 2, 3)}
         controls = {}
