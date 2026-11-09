@@ -1,5 +1,5 @@
 {
- "runs": 6,
+ "runs": 7,
  "actions": [
   {
    "ts": "2026-11-09T16:21:39+00:00",
@@ -60,8 +60,18 @@
    "ts": "2026-11-09T16:24:46+00:00",
    "day": 50.83,
    "act": "loan -> 1000000  (unfunded high-payback capacity $2,710,000)"
+  },
+  {
+   "ts": "2026-11-09T16:28:16+00:00",
+   "day": 50.96,
+   "act": "roq -> 4320  (EOQ 4299, cover 4.5d)"
+  },
+  {
+   "ts": "2026-11-09T16:28:16+00:00",
+   "day": 50.96,
+   "act": "rop -> 4560  (D 906 kits/d, lead 4d + 1.0d safety)"
   }
  ],
- "last_day": 50.83,
- "last": "2026-11-09T16:24:46+00:00 day 50.8 cash $174,511 debt $0 machines {1: 3, 2: 1, 3: 1} on-order {1: 0, 2: 0, 3: 0} inv 1140 rop/roq 1500/2580 contract 1 wip 300 rule pri4 edits=on"
+ "last_day": 50.96,
+ "last": "2026-11-09T16:28:16+00:00 day 51.0 cash $124,511 debt $1,000,000 machines {1: 3, 2: 1, 3: 1} on-order {1: 2, 2: 2, 3: 2} inv 1140 rop/roq 1500/2580 contract 1 wip 8 rule pri4 edits=on"
 }
