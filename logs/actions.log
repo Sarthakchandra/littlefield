@@ -79,3 +79,5 @@ lf.client.GameError: login failed:  Littlefield Invalid team id or password! Ple
   OK   buy S3 -> 8  (want 16 (λplan 49.3/d, backlog 531h)) |  Station Form Littlefield Technologies - CONFIRMATION Processing request... Processing request... 2 machines were purchased for station 3 
 2026-11-09T19:37:20+00:00 day 57.5 cash $99,458 debt $1,000,000 machines {1: 7, 2: 4, 3: 6} on-order {1: 2, 2: 1, 3: 2} inv 8040 rop/roq 6360/5760 contract 1 wip 8 rule pri4 edits=on
   OK   rop -> 8160  (D 1630 kits/d, lead 4d + 1.0d safety) |  Materials Form Littlefield Technologies - CONFIRMATION Processing request... Processing request... Material order point is now 136 x 60 = 8160 units 
+2026-11-09T19:46:31+00:00 day 57.8 cash $40,858 debt $1,000,000 machines {1: 7, 2: 4, 3: 6} on-order {1: 2, 2: 1, 3: 2} inv 8040 rop/roq 8160/5760 contract 1 wip 8 rule pri4 edits=on
+  OK   roq -> 2040  (EOQ 5768, cover 4.5d) |  Materials Form Littlefield Technologies - CONFIRMATION Processing request... Processing request... Material order quantity is now 34 x 60 = 2040 units 
