@@ -126,3 +126,5 @@ lf.client.GameError: login failed:  Littlefield Invalid team id or password! Ple
   no changes needed
 2026-11-09T23:08:14+00:00 day 64.8 cash $130,181 debt $1,000,000 machines {1: 9, 2: 5, 3: 8} on-order {1: 0, 2: 0, 3: 0} inv 9600 rop/roq 6900/6120 contract 3 wip 8 rule pri4 edits=on | done 23/d c3 lt 6.3h rev $1,308 queued 2 jobs accepted 25/d util 0.94/0.63/0.41
   no changes needed
+2026-11-09T23:17:24+00:00 day 65.2 cash $142,155 debt $1,000,000 machines {1: 9, 2: 5, 3: 8} on-order {1: 0, 2: 0, 3: 0} inv 7980 rop/roq 6900/6120 contract 3 wip 8 rule pri4 edits=on | done 27/d c3 lt 6.5h rev $1,276 queued 1 jobs accepted 27/d util 0.96/0.66/0.58
+  OK   rop -> 7980  (D 1591 kits/d, lead 4d + 1.0d safety) |  Materials Form Littlefield Technologies - CONFIRMATION Processing request... Processing request... Material order point is now 133 x 60 = 7980 units 
