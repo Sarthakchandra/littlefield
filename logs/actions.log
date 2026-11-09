@@ -13,3 +13,12 @@ lf.client.GameError: login failed:  Littlefield Invalid team id or password! Ple
 2026-11-09T16:15:41+00:00 day 50.5 cash $714,511 debt $0 machines {1: 3, 2: 1, 3: 1} on-order {1: 0, 2: 0, 3: 0} inv 1140 rop/roq 1500/7200 contract 1 wip 300 rule fifo edits=OFF
   c3 mode off: no lot-size control on the page
   no changes needed
+2026-11-09T16:21:39+00:00 day 50.7 cash $714,511 debt $0 machines {1: 3, 2: 1, 3: 1} on-order {1: 0, 2: 0, 3: 0} inv 1140 rop/roq 1500/7200 contract 1 wip 300 rule fifo edits=on
+  OK   wip -> 8  (μ 5.2 jobs/d x 0.6d) | maxwip=8
+  OK   lots -> 3  (20-kit lots: flow 5.2h fits the 6h quote) | lotCount=3
+  OK   buy S1 -> 5  (want 16 (λplan 34.3/d, backlog 206h)) |  Station Form Littlefield Technologies - CONFIRMATION Processing request... Processing request... 2 machines were purchased for station 1 
+  OK   buy S2 -> 3  (want 9 (λplan 34.3/d, backlog 676h)) |  Station Form Littlefield Technologies - CONFIRMATION Processing request... Processing request... 2 machines were purchased for station 2 
+  OK   buy S3 -> 3  (want 11 (λplan 34.3/d, backlog 375h)) |  Station Form Littlefield Technologies - CONFIRMATION Processing request... Processing request... 2 machines were purchased for station 3 
+  OK   loan -> 1000000  (unfunded high-payback capacity $2,270,000) |  Loan Form Littlefield Technologies - CONFIRMATION Please confirm: Change total debt to $1,000,000. Initial fee will be $50,000. Daily interest on total debt will become $500 (rounded up to nearest do
+  OK   rule S2 -> pri4  (config) |  Station Form Littlefield Technologies - CONFIRMATION Processing request... Processing request... New scheduling rule for station 2 set to pri4 
+  OK   roq -> 2580  (EOQ 2522, cover 4.5d) |  Materials Form Littlefield Technologies - CONFIRMATION Processing request... Processing request... Material order quantity is now 43 x 60 = 2580 units 
