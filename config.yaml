@@ -2,12 +2,12 @@
 
 dry_run: false            # true = log decisions, change nothing
 allow_loans: true         # borrow (20%/yr + 5% fee) to fund fast-payback capacity
-stop_after_day: 299.5
+stop_after_day: 299.95     # final sell-down happens at 299.5+
 
 # hard limits, applied after the policy
 max_spend_per_run: 600000
 max_buy_per_station_per_run: 8
-max_sell_per_run: 3
+max_sell_per_run: 15        # end-of-game sell-down needs room
 
 # policy knobs (defaults in lf/policy.py, tuned on the digital twin)
 policy:
@@ -17,6 +17,7 @@ policy:
   max_debt: 600000
   safety_days: 1.0        # kit safety stock
   rule: pri4              # tester priority: fifo | pri2 | pri4
-  sell_from_day: 200
+  sell_mode: final         # stop accepting at 299.3, sell down to 1 per station once WIP is 0
+  c2_revert_lt: 1.5        # c2 pays $750 at 1.5 days: below that c1 is better
   no_edit_mode: hold      # if contract/WIP never become editable: stop buying kits, keep cash
   hold_after_day: 55
