@@ -1,0 +1,56 @@
+name: littlefield-loop
+
+# One long job that runs the bot every ~9 minutes, then restarts itself.
+# Exists because GitHub's cron never started for this repo. Stop it by
+# cancelling the run in the Actions tab (or set the PAUSE variable to 1).
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: littlefield-bot
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      LF_ID: ${{ secrets.LF_ID }}
+      LF_PASSWORD: ${{ secrets.LF_PASSWORD }}
+      LF_INSTITUTION: iimb
+      PAUSE: ${{ vars.PAUSE }}
+      DRY_RUN: ${{ vars.DRY_RUN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Run the bot every 9 minutes for ~5.5 hours
+        run: |
+          git config user.name "littlefield-bot"
+          git config user.email "bot@users.noreply.github.com"
+          end=$((SECONDS + 19500))
+          while [ $SECONDS -lt $end ]; do
+            git pull --rebase --autostash -q || true      # picks up config.yaml edits
+            python bot.py || true
+            git add state logs || true
+            git commit -qm "bot run $(date -u +%H:%M) [skip ci]" || true
+            git pull --rebase --autostash -q || true
+            git push -q || true
+            over=$(python -c "import json;print(int((json.load(open('state/state.json')).get('last_day') or 0) >= 300))" 2>/dev/null || echo 0)
+            if [ "$over" = "1" ]; then echo "game over"; exit 0; fi
+            sleep 540
+          done
+      - name: Restart the loop
+        if: success()
+        run: |
+          over=$(python -c "import json;print(int((json.load(open('state/state.json')).get('last_day') or 0) >= 300))" 2>/dev/null || echo 0)
+          if [ "$over" != "1" ]; then gh workflow run keepalive.yml --ref main; fi
