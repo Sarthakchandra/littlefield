@@ -59,13 +59,23 @@ DEFAULTS = dict(
     rule="pri4",
     enable_c3=False,
     c2_switch_lt=1.0,          # switch to c2 once a new job's predicted lead time fits the 1-day quote
-    c2_revert_lt=1.8,          # back to c1 if lead time blows out (c2 earns < c1 past ~1.5d)
+    c2_revert_lt=1.5,          # back to c1 past break-even: c2 pays $750 at 1.5 days (quote 1d, $0 at 3d)
     wip_days=0.6,              # WIP cap = throughput x this many days
     min_wip=8,
     sell_from_day=200,
     allow_loans=False,
     max_debt=600_000,
     low_frac_prior=0.6,        # prior: post-day-180 demand as share of peak
+    backlog_term=True,         # size machines to also clear the day-50 backlog
+    buy_order="loaded",        # loaded = highest load first; binding = lowest installed capacity first
+    loan_upfront=False,        # take max_debt on the first run, before buying
+    kit_margin=None,           # None = old rule; else Q >= 4 days x (1+margin), ROP = 4 days + z sd
+    kit_z=2.0,
+    sell_mode="final",        # surplus = sell surplus from sell_from_day; final = sell down to 1 each at the end
+    stop_accept_day=299.3,
+    final_sale_day=299.5,
+    wave_only=True,
+    day50_wave=None,           # e.g. {1: 4, 2: 5, 3: 2}: fixed first purchase instead of the rule
     hold_after_day=55,
     no_edit_mode="hold",       # if contract/WIP can't be edited: "hold" cash or "invest" anyway
 )
@@ -176,6 +186,8 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
         # cap WIP so a new job's lead time stays inside the c2 quote. When demand
         # beats capacity this rejects the excess instead of letting every job go late.
         cap = int(max(cfg["min_wip"], round(mu_now * cfg["wip_days"])))
+        if cfg["sell_mode"] == "final" and d >= cfg["stop_accept_day"]:
+            cap = 1   # nothing accepted now can finish by day 300
         if abs(cap - obs.wip_limit) >= max(2, 0.12 * obs.wip_limit):
             acts.append(Action("wip", cap, reason=f"μ {mu_now:.1f} jobs/d x {cfg['wip_days']}d"))
         if contract != 2 and lt_new <= cfg["c2_switch_lt"]:
@@ -194,10 +206,16 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
     rem = max(0.0, GAME_END - t0)
     spend_left = min(cfg["max_spend_per_run"],
                      obs.cash - (obs.roq * obs.kit_unit + obs.kit_order_cost) - cfg["cash_buffer"])
+    upfront = 0
+    if (cfg["allow_loans"] and cfg["loan_upfront"] and obs.can_edit_orders and obs.debt == 0
+            and d < 52 and lt_new > 3):
+        upfront = int(cfg["max_debt"])
+        acts.insert(0, Action("loan", upfront, reason="day-50 loan to fund the first capacity wave"))
+        spend_left = min(cfg["max_spend_per_run"], spend_left + upfront)
     want = {}
     for k in (1, 2, 3):
         steady = lam_plan * h[k] / (24 * u)
-        flush = backlog_h[k] / (24 * cfg["flush_days"]) / u
+        flush = backlog_h[k] / (24 * cfg["flush_days"]) / u if cfg["backlog_term"] else 0.0
         need = math.ceil(steady + flush - 1e-9)
         life_need = math.ceil(lam_life * h[k] / (24 * u) + 1e-9)
         need = min(need, life_need + 1, cfg["max_machines"])
@@ -212,6 +230,10 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
         return per_day * rem >= cfg["min_payback_mult"] * (price - salvage)
 
     buys = []
+    wave = cfg["day50_wave"]
+    if wave and d < 52 and lt_new > 3 and not any(obs.on_order.values()):
+        for k in (1, 2, 3):
+            want[k] = max(want[k] if not cfg["wave_only"] else 0, obs.machines[k] + int(wave.get(k, wave.get(str(k), 0))))
     shortfall = {k: want[k] - eff[k] for k in (1, 2, 3)}
     # buy one at a time on the most loaded station, so a cash limit hits the
     # least critical station last
@@ -220,8 +242,11 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
         cands = [k for k in (1, 2, 3) if shortfall[k] - alloc[k] > 0 and pays(k)]
         if not cands:
             break
-        k = max(cands, key=lambda k: (lam_plan * h[k] + backlog_h[k] / cfg["flush_days"]) /
-                (24 * (eff[k] + alloc[k])))
+        if cfg["buy_order"] == "binding":
+            k = min(cands, key=lambda k: (eff[k] + alloc[k]) * 24 / h[k])
+        else:
+            k = max(cands, key=lambda k: (lam_plan * h[k] + backlog_h[k] / cfg["flush_days"]) /
+                    (24 * (eff[k] + alloc[k])))
         price = PRICES[k][0]
         if spend_left < price:
             break
@@ -234,7 +259,9 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
     acts += buys
     unfunded = sum(PRICES[k][0] * (shortfall[k] - alloc[k]) for k in (1, 2, 3)
                    if shortfall[k] - alloc[k] > 0 and pays(k))
-    if cfg["allow_loans"] and obs.can_edit_orders and unfunded > 0 and d < 150 and obs.debt < cfg["max_debt"]:
+    if upfront:
+        pass
+    elif cfg["allow_loans"] and obs.can_edit_orders and unfunded > 0 and d < 150 and obs.debt < cfg["max_debt"]:
         amt = min(unfunded * 1.05, cfg["max_debt"] - obs.debt)
         if amt >= 50_000:
             acts.append(Action("loan", int(amt), reason=f"unfunded high-payback capacity ${unfunded:,.0f}"))
@@ -243,8 +270,14 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
         if free > 20_000:
             acts.append(Action("repay", int(min(free, obs.debt)), reason="debt costs 20%, cash earns 10%"))
 
+    # ---- end of game: stop accepting, then sell down once the plant is empty
+    if cfg["sell_mode"] == "final":
+        if d >= cfg["final_sale_day"] and wip_jobs < 3:   # plots lag a day; a few jobs still finish on 1 machine
+            for k in (1, 2, 3):
+                if obs.machines[k] > 1:
+                    acts.append(Action("sell", 1, station=k, reason="game over: resale beats idle machine"))
     # ---- sell surplus late in the game
-    if d >= cfg["sell_from_day"]:
+    elif d >= cfg["sell_from_day"]:
         for k in (1, 2, 3):
             keep = max(1, math.ceil(lam_life * h[k] / (24 * u) + 1e-9) + 1)
             if obs.machines[k] > keep and obs.on_order.get(k, 0) == 0 and backlog_h[k] < 24:
@@ -264,8 +297,13 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
     hold = cfg["holding_per_kit_day"]
     eoq = math.sqrt(2 * D * S / hold) if D > 0 else 60
     lead = 4.0
-    rop = _ceil60((lead + cfg["safety_days"]) * D)
-    roq = _ceil60(max(eoq, (lead + 0.5) * D))
+    if cfg["kit_margin"] is None:
+        rop = _ceil60((lead + cfg["safety_days"]) * D)
+        roq = _ceil60(max(eoq, (lead + 0.5) * D))
+    else:
+        dj = D / 60
+        rop = _ceil60(lead * D + cfg["kit_z"] * 60 * math.sqrt(lead * dj))
+        roq = _ceil60(max(eoq, (1 + cfg["kit_margin"]) * lead * D))
     # endgame: never buy kits we can't turn into revenue
     need_rest = sum(60 * min(f.rate(t + 0.5), mu) for t in range(int(d), GAME_END - 1))
     have = obs.inventory + obs.kits_on_order
@@ -278,10 +316,12 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
     afford = int((obs.cash - cfg["cash_buffer"] - sum(PRICES[a.station][0] * (a.value - obs.machines[a.station])
                                                       for a in buys)) / obs.kit_unit)
     roq = max(60, min(roq, (afford // 60) * 60))
-    if _changed(obs.rop, rop):
-        acts.append(Action("rop", rop, reason=f"D {D:.0f} kits/d, lead 4d + {cfg['safety_days']}d safety"))
+    # the game changes one field per submit: post Q before ROP so a raised ROP
+    # can't fire an order at the old, smaller Q
     if _changed(obs.roq, roq, 0.3 if roq > obs.roq else 0.15):
         acts.append(Action("roq", roq, reason=f"EOQ {eoq:.0f}, cover {lead + 0.5}d"))
+    if _changed(obs.rop, rop):
+        acts.append(Action("rop", rop, reason=f"D {D:.0f} kits/d, lead 4d + {cfg['safety_days']}d safety"))
     return acts
 
 
