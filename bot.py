@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import time
 import traceback
@@ -47,6 +48,24 @@ def save_state(st):
     STATE.write_text(json.dumps(st, indent=1))
 
 
+def pending_from_log(day: float) -> dict:
+    """Machines bought but not yet delivered (3-day lead), rebuilt from our own log.
+    The live station page doesn't word in-transit machines the way the parser expects."""
+    pend = {1: 0, 2: 0, 3: 0}
+    if not LOG.exists():
+        return pend
+    cur = None
+    for line in LOG.read_text().splitlines():
+        m = re.search(r" day (\d+(?:\.\d+)?) cash", line)
+        if m:
+            cur = float(m.group(1))
+            continue
+        m = re.search(r"(\d+) machines? (?:was|were) purchased for station (\d)", line)
+        if m and cur is not None and cur + 3.05 > day:
+            pend[int(m.group(2))] += int(m.group(1))
+    return pend
+
+
 def to_obs(snap) -> Observation:
     series = {}
     for k in ("JOBIN", "JOBQ", "S1Q", "S2Q", "S3Q"):
@@ -58,6 +77,8 @@ def to_obs(snap) -> Observation:
                 out[int(round(x))] = out.get(int(round(x)), 0) + y
     series["JOBOUT"] = out
     can_edit = all(k in snap.controls for k in ("contract", "wip"))
+    led = pending_from_log(snap.day)
+    snap.on_order = {k: max(snap.on_order.get(k, 0), led[k]) for k in (1, 2, 3)}
     return Observation(
         day=snap.day, cash=snap.cash, machines=snap.machines, on_order=snap.on_order,
         inventory=snap.inventory, kits_on_order=snap.kits_on_order, rop=snap.rop, roq=snap.roq,
@@ -95,8 +116,11 @@ def guard(acts, obs, cfg):
 
 def execute(client, snap, a):
     c = snap.controls
-    if a.kind in ("buy", "sell"):
-        return client.submit(c[f"count{a.station}"], a.value)
+    if a.kind == "buy":
+        # the game's count is installed + on order, so add what's in transit
+        return client.submit(c[f"count{a.station}"], a.value + snap.on_order.get(a.station, 0))
+    if a.kind == "sell":
+        return client.submit(c[f"count{a.station}"], a.value + snap.on_order.get(a.station, 0))
     if a.kind in ("rop", "roq", "contract", "wip", "rule", "lots"):
         if a.kind not in c:
             raise GameError(f"no '{a.kind}' control on the page")
