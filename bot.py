@@ -141,7 +141,11 @@ def main(client=None, now=None) -> int:
         if snap.day >= cfg.get("stop_after_day", 299.5):
             lines.append("  game over or about to end: no actions")
         else:
-            acts = guard(decide(obs, cfg.get("policy", {}) | {"allow_loans": cfg.get("allow_loans", False)}), obs, cfg)
+            pol = cfg.get("policy", {}) | {"allow_loans": cfg.get("allow_loans", False)}
+            if pol.get("c3_mode") and "lots" not in snap.controls:
+                pol["c3_mode"] = False   # can't split lots: contract 3 can't hit its 6h quote
+                lines.append("  c3 mode off: no lot-size control on the page")
+            acts = guard(decide(obs, pol), obs, cfg)
             for a in acts:
                 if dry:
                     lines.append(f"  DRY  {a}")
