@@ -11,13 +11,16 @@ max_sell_per_run: 15        # end-of-game sell-down needs room
 
 # policy knobs (defaults in lf/policy.py, tuned on the digital twin)
 policy:
-  util_target: 0.90       # planned machine utilisation at forecast demand
+  util_target: 0.85       # planned machine utilisation at forecast demand
   flush_days: 6           # clear the day-50 backlog over ~6 days
   wip_days: 0.6           # WIP cap = throughput x 0.6 day -> lead time < 1 day
-  max_debt: 600000
+  max_debt: 1000000       # c3 needs ~2x the machines; $1M debt tested best
   safety_days: 1.0        # kit safety stock
   rule: pri4              # tester priority: fifo | pri2 | pri4
   sell_mode: final         # stop accepting at 299.3, sell down to 1 per station once WIP is 0
   c2_revert_lt: 1.5        # c2 pays $750 at 1.5 days: below that c1 is better
+  c3_mode: true           # split each order into 3 lots of 20 and run contract 3 ($1,500, 6h quote)
+  target_lots: 3          # flow ~5.2h at lot 20; lot 12 needs too much capital
+  max_machines: 40
   no_edit_mode: hold      # if contract/WIP never become editable: stop buying kits, keep cash
   hold_after_day: 55
