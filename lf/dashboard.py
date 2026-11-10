@@ -59,6 +59,61 @@ def backfill(log_path: Path) -> dict:
     return {"history": hist, "actions": acts}
 
 
+PRICE = {1: 90_000, 2: 80_000, 3: 100_000}
+RESALE = {1: 9_000, 2: 8_000, 3: 10_000}
+LOAN_FEE = 0.05
+
+
+def apply_actions(row: dict, acts: list, table: list | None, team: str) -> None:
+    """The snapshot is read before the bot acts. Fold this run's successful changes
+    into the row (and our leaderboard entry) so the dashboard is current now,
+    not one run later."""
+    net0 = row["cash"] - row["debt"]
+    for a in acts:
+        if not a.get("ok"):
+            continue
+        s = a["act"]
+        m = re.match(r"(buy|sell) S(\d) -> (\d+)", s)
+        if m:
+            k, target = int(m.group(2)), int(m.group(3))
+            i = k - 1
+            if m.group(1) == "buy":
+                n = max(0, target - row["m"][i])
+                row["on_order"][i] += n
+                row["cash"] -= n * PRICE[k]
+            else:
+                n = max(0, row["m"][i] - target)
+                row["m"][i] -= n
+                row["cash"] += n * RESALE[k]
+            continue
+        m = re.match(r"(loan|repay) -> (\d+)", s)
+        if m:
+            v = int(m.group(2))
+            if m.group(1) == "loan":
+                row["debt"] += v
+                row["cash"] += v * (1 - LOAN_FEE)
+            else:
+                row["debt"] -= v
+                row["cash"] -= v
+            continue
+        m = re.match(r"(contract|wip|rop|roq) -> (\d+)", s)
+        if m:
+            row[{"contract": "contract", "wip": "wip"}.get(m.group(1), m.group(1))] = int(m.group(2))
+    shift = (row["cash"] - row["debt"]) - net0
+    if not shift:
+        return
+    if row.get("our_score") is not None:
+        row["our_score"] += shift
+    if table:
+        for r in table:
+            if str(r["team"]).lower() == team.lower():
+                r["cash"] += shift
+        table.sort(key=lambda r: -r["cash"])
+        for i, r in enumerate(table, 1):
+            if str(r["team"]).lower() == team.lower() and row.get("rank"):
+                row["rank"] = i
+
+
 def update(path: Path, log_path: Path, team: str, snap, kp: dict, rank: dict | None,
            done_lines: list) -> None:
     data = json.loads(path.read_text()) if path.exists() else {}
@@ -70,6 +125,11 @@ def update(path: Path, log_path: Path, team: str, snap, kp: dict, rank: dict | N
                **{k: v for k, v in kp.items() if k != "t"})
     if rank and rank.get("rank"):
         row.update(rank=rank["rank"], teams=rank["teams"], leader=rank["leader"], our_score=rank.get("cash"))
+    table = [dict(r) for r in rank["table"]] if rank and rank.get("table") else None
+    apply_actions(row, done_lines, table, team)
+    if table:
+        rank = dict(rank, table=table)
+        row["leader"] = table[0]["cash"]
     hist = data.setdefault("history", [])
     if not hist or hist[-1].get("t") != row["t"]:
         hist.append(row)
