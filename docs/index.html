@@ -11,7 +11,7 @@
 :root {
   --ground: #F1F2F4; --ink: #0D1117; --mute: #5B6475;
   --field: #FFFFFF; --field-2: #E3E4E6; --field-3: #D3D5D9;
-  --cobalt: #2440F0; --cobalt-soft: #DCE1FD; --cobalt-ink: #1A2FB8;
+  --cobalt: #2440F0; --cobalt-soft: #DCE1FD; --cobalt-ink: #1A2FB8; --on-cobalt: #FFFFFF;
   --gain: #0B7A4B; --loss: #B3261E;
   --s1: #2440F0; --s2: #0D1117; --s3: #8A93A3;
   --grid: #D3D5D9;
@@ -21,7 +21,7 @@
   :root:not([data-theme="light"]) {
     --ground: #0D1117; --ink: #E8EAEE; --mute: #9AA3B2;
     --field: #161B22; --field-2: #1F2630; --field-3: #2A323D;
-    --cobalt: #6F82F5; --cobalt-soft: #1B2350; --cobalt-ink: #A8B3F8;
+    --cobalt: #6F82F5; --cobalt-soft: #1B2350; --cobalt-ink: #A8B3F8; --on-cobalt: #0D1117;
     --gain: #3DBE85; --loss: #F2766E;
     --s1: #6F82F5; --s2: #E8EAEE; --s3: #7C8697; --grid: #2A323D;
     color-scheme: dark;
@@ -30,7 +30,7 @@
 :root[data-theme="dark"] {
   --ground: #0D1117; --ink: #E8EAEE; --mute: #9AA3B2;
   --field: #161B22; --field-2: #1F2630; --field-3: #2A323D;
-  --cobalt: #6F82F5; --cobalt-soft: #1B2350; --cobalt-ink: #A8B3F8;
+  --cobalt: #6F82F5; --cobalt-soft: #1B2350; --cobalt-ink: #A8B3F8; --on-cobalt: #0D1117;
   --gain: #3DBE85; --loss: #F2766E;
   --s1: #6F82F5; --s2: #E8EAEE; --s3: #7C8697; --grid: #2A323D;
   color-scheme: dark;
@@ -57,7 +57,7 @@ button {
 }
 button:hover { background: var(--field-3); }
 button:active { transform: scale(0.97); }
-button.primary { background: var(--cobalt); color: #fff; }
+button.primary { background: var(--cobalt); color: var(--on-cobalt); }
 button.primary:hover { background: var(--cobalt-ink); }
 
 .hero { display: grid; gap: 24px; padding: 24px 0 40px; grid-template-columns: 1fr; }
@@ -65,7 +65,7 @@ button.primary:hover { background: var(--cobalt-ink); }
 .big { font-weight: 800; font-size: clamp(52px, 11vw, 120px); letter-spacing: -0.04em; line-height: 0.95; margin-left: -0.04em; }
 .big.neg { color: var(--loss); }
 .lead { font-size: 20px; color: var(--mute); margin-top: 8px; max-width: 60ch; }
-.rankbox { background: var(--cobalt); color: #fff; padding: 24px; }
+.rankbox { background: var(--cobalt); color: var(--on-cobalt); padding: 24px; }
 .rankbox .r { font-weight: 800; font-size: clamp(52px, 8vw, 96px); letter-spacing: -0.04em; line-height: 0.95; }
 .rankbox .s { font-size: 16px; margin-top: 8px; opacity: 0.9; }
 
