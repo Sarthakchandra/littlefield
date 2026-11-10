@@ -200,6 +200,24 @@ def parse_forms(h: str):
     return out
 
 
+def parse_standing(h: str, team: str):
+    """Overall Standing table -> (rank, teams, our cash, leader cash). Rank = row order."""
+    rows = []
+    for tr in re.findall(r"<tr[^>]*>([\s\S]*?)</tr>", h, re.I):
+        cells = [_text(c).strip() for c in re.findall(r"<t[dh][^>]*>([\s\S]*?)</t[dh]>", tr, re.I)]
+        nums = [c for c in cells if re.fullmatch(r"-?\$?[\d,]+(?:\.\d+)?", c)]
+        if cells and nums:
+            rows.append((cells, _num(nums[-1].replace("$", ""))))
+    if not rows:
+        return None
+    rows.sort(key=lambda r: -r[1])
+    for i, (cells, cash) in enumerate(rows, 1):
+        if any(c.lower() == team.lower() for c in cells):
+            return dict(rank=i, teams=len(rows), cash=cash, leader=rows[0][1],
+                        leader_team=next((c for c in rows[0][0] if not re.search(r"\d{3}", c)), ""))
+    return dict(rank=None, teams=len(rows), cash=None, leader=rows[0][1], leader_team="")
+
+
 class LittlefieldClient:
     def __init__(self, team: str, password: str, base: str = "https://op2.responsive.net",
                  institution: str = "iimb", timeout: float = 30.0, pause: float = 0.3):
@@ -280,6 +298,12 @@ class LittlefieldClient:
                     key = name if lab == "data" else f"{name}_{lab.replace('contract ', 'c')}"
                     snap.series[key] = pts
         return snap
+
+    def standing(self):
+        try:
+            return parse_standing(self.get("Standing"), self.team)
+        except Exception:  # noqa: BLE001
+            return None
 
     # ---------- write ----------
     def submit(self, control: Control, value) -> str:
