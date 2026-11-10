@@ -24,6 +24,7 @@ from pathlib import Path
 import yaml
 
 from lf.client import LittlefieldClient, GameError
+from lf import notify
 from lf.policy import Observation, decide, PRICES
 
 ROOT = Path(__file__).parent
@@ -184,7 +185,12 @@ def main(client=None, now=None) -> int:
                 f"machines {snap.machines} on-order {snap.on_order} inv {snap.inventory} "
                 f"rop/roq {snap.rop}/{snap.roq} contract {snap.contract} wip {snap.wip_limit} "
                 f"rule {snap.rule} edits={'on' if obs.can_edit_orders else 'OFF'} | {kpis(snap)}")
+        rank = client.standing() if hasattr(client, "standing") else None
+        rank_txt = (f"rank {rank['rank']}/{rank['teams']} (leader ${rank['leader']:,.0f})"
+                    if rank and rank.get("rank") else "rank n/a")
+        head += f" | {rank_txt}"
         lines.append(head)
+        done = []
         if snap.day >= cfg.get("stop_after_day", 299.5):
             lines.append("  game over or about to end: no actions")
         else:
@@ -200,6 +206,7 @@ def main(client=None, now=None) -> int:
                 try:
                     res = execute(client, snap, a)
                     lines.append(f"  OK   {a} | {res}")
+                    done.append(str(a).split("  (")[0])
                     st["actions"].append({"ts": ts, "day": snap.day, "act": str(a)})
                 except GameError as e:
                     lines.append(f"  FAIL {a} | {e}")
@@ -208,6 +215,12 @@ def main(client=None, now=None) -> int:
                 lines.append("  no changes needed")
         st["last_day"] = snap.day
         st["last"] = head
+        major = [x for x in done if not x.startswith(("rop", "roq"))]
+        if done and not dry and (cfg.get("notify_on", "all") == "all" or major):
+            msg = (f"Littlefield day {snap.day:.1f}: cash ${snap.cash:,.0f}, debt ${snap.debt:,.0f}, {rank_txt}\n"
+                   f"{kpis(snap)}\nmachines {snap.machines}, contract {snap.contract}, wip cap {snap.wip_limit}\n"
+                   f"changes: " + "; ".join(done))
+            lines.append("  notify: " + ", ".join(notify.send(msg, st, cfg.get("notify_owner"))))
     except Exception as e:  # noqa: BLE001
         lines.append(f"{ts} ERROR {e}")
         lines.append(traceback.format_exc())
