@@ -24,7 +24,7 @@ from pathlib import Path
 import yaml
 
 from lf.client import LittlefieldClient, GameError
-from lf import notify
+from lf import notify, dashboard
 from lf.policy import Observation, decide, PRICES
 
 ROOT = Path(__file__).parent
@@ -86,6 +86,23 @@ def to_obs(snap) -> Observation:
         kit_unit=snap.kit_unit, kit_order_cost=snap.kit_order_cost, contract=snap.contract,
         lots_per_job=snap.lots_per_job, wip_limit=snap.wip_limit, rule=snap.rule, series=series,
         can_edit_orders=can_edit, debt=snap.debt)
+
+
+def kpi_dict(snap) -> dict:
+    def last(key):
+        ser = snap.series.get(key) or {}
+        return ser[max(ser)] if ser else None
+    d = {"done": sum(v for k, v in ((k, last(k)) for k in snap.series if k.startswith("JOBOUT")) if v)}
+    for c in (1, 2, 3):
+        if last(f"JOBOUT_c{c}"):
+            d["lt_h"], d["rev"] = round(last(f"JOBT_c{c}") * 24, 2), last(f"JOBREV_c{c}")
+    d["queued"] = round(sum((last(f"S{k}Q") or 0) for k in (1, 2, 3)) / 60, 1)
+    if last("JOBIN") is not None:
+        d["acc"] = last("JOBIN")
+    u = [last(f"S{k}UTIL") for k in (1, 2, 3)]
+    if all(x is not None for x in u):
+        d["util"] = [round(x, 3) for x in u]
+    return d
 
 
 def kpis(snap) -> str:
@@ -190,7 +207,7 @@ def main(client=None, now=None) -> int:
                     if rank and rank.get("rank") else "rank n/a")
         head += f" | {rank_txt}"
         lines.append(head)
-        done = []
+        done, acts_rec = [], []
         if snap.day >= cfg.get("stop_after_day", 299.5):
             lines.append("  game over or about to end: no actions")
         else:
@@ -207,14 +224,23 @@ def main(client=None, now=None) -> int:
                     res = execute(client, snap, a)
                     lines.append(f"  OK   {a} | {res}")
                     done.append(str(a).split("  (")[0])
+                    acts_rec.append(dict(t=ts, day=round(snap.day, 2), ok=True, act=str(a).split("  (")[0],
+                                         why=a.reason, res=str(res).replace("Processing request...", "").strip()[-160:]))
                     st["actions"].append({"ts": ts, "day": snap.day, "act": str(a)})
                 except GameError as e:
                     lines.append(f"  FAIL {a} | {e}")
+                    acts_rec.append(dict(t=ts, day=round(snap.day, 2), ok=False, act=str(a).split("  (")[0],
+                                         why=a.reason, res=str(e)[:160]))
                     rc = 2
             if not acts:
                 lines.append("  no changes needed")
         st["last_day"] = snap.day
         st["last"] = head
+        try:
+            dashboard.update(STATE.parent / "dashboard.json", LOG, snap.team or cfg.get("team", ""),
+                             snap, dict(kpi_dict(snap), t=ts), rank, acts_rec)
+        except Exception as e:  # noqa: BLE001
+            lines.append(f"  dashboard data failed: {e}")
         major = [x for x in done if not x.startswith(("rop", "roq"))]
         if done and not dry and (cfg.get("notify_on", "all") == "all" or major):
             msg = (f"Littlefield day {snap.day:.1f}: cash ${snap.cash:,.0f}, debt ${snap.debt:,.0f}, {rank_txt}\n"
