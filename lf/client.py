@@ -211,11 +211,13 @@ def parse_standing(h: str, team: str):
     if not rows:
         return None
     rows.sort(key=lambda r: -r[1])
+    name = lambda cells: next((c for c in cells if re.search(r"[A-Za-z]", c)), cells[0])
+    table = [{"team": name(c), "cash": v} for c, v in rows]
     for i, (cells, cash) in enumerate(rows, 1):
         if any(c.lower() == team.lower() for c in cells):
             return dict(rank=i, teams=len(rows), cash=cash, leader=rows[0][1],
-                        leader_team=next((c for c in rows[0][0] if not re.search(r"\d{3}", c)), ""))
-    return dict(rank=None, teams=len(rows), cash=None, leader=rows[0][1], leader_team="")
+                        leader_team=name(rows[0][0]), table=table)
+    return dict(rank=None, teams=len(rows), cash=None, leader=rows[0][1], leader_team=name(rows[0][0]), table=table)
 
 
 class LittlefieldClient:
