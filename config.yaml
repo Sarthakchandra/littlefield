@@ -7,7 +7,7 @@ stop_after_day: 299.95     # final sell-down happens at 299.5+
 # hard limits, applied after the policy
 max_spend_per_run: 600000
 max_buy_per_station_per_run: 8
-max_sell_per_run: 15        # end-of-game sell-down needs room
+max_sell_per_run: 40        # end-of-game sell-down happens in one or two runs
 
 # notifications (GitHub issue comment -> email; WhatsApp if WA_PHONE/WA_APIKEY secrets exist)
 notify_on: all            # all = every change; major = skip kit reorder tweaks
