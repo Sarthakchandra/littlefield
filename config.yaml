@@ -9,12 +9,16 @@ max_spend_per_run: 600000
 max_buy_per_station_per_run: 8
 max_sell_per_run: 15        # end-of-game sell-down needs room
 
+# notifications (GitHub issue comment -> email; WhatsApp if WA_PHONE/WA_APIKEY secrets exist)
+notify_on: all            # all = every change; major = skip kit reorder tweaks
+notify_owner: Sarthakchandra
+
 # policy knobs (defaults in lf/policy.py, tuned on the digital twin)
 policy:
   util_target: 0.85       # planned machine utilisation at forecast demand
   flush_days: 6           # clear the day-50 backlog over ~6 days
   wip_days: 0.6           # WIP cap = throughput x 0.6 day -> lead time < 1 day
-  max_debt: 1000000       # c3 needs ~2x the machines; $1M debt tested best
+  max_debt: 1800000       # raised day 78: stuffers maxed, ~15 orders/day turned away
   safety_days: 1.0        # kit safety stock
   rule: pri4              # tester priority: fifo | pri2 | pri4
   sell_mode: final         # stop accepting at 299.3, sell down to 1 per station once WIP is 0
