@@ -12,7 +12,7 @@
   --ground: #F1F2F4; --ink: #0D1117; --mute: #5B6475;
   --field: #FFFFFF; --field-2: #E3E4E6; --field-3: #D3D5D9;
   --cobalt: #2440F0; --cobalt-soft: #DCE1FD; --cobalt-ink: #1A2FB8; --on-cobalt: #FFFFFF;
-  --gain: #0B7A4B; --loss: #B3261E;
+  --gain: #0B7A4B; --loss: #B3261E; --on-loss: #FFFFFF;
   --s1: #2440F0; --s2: #0D1117; --s3: #8A93A3;
   --grid: #D3D5D9;
   color-scheme: light;
@@ -22,7 +22,7 @@
     --ground: #0D1117; --ink: #E8EAEE; --mute: #9AA3B2;
     --field: #161B22; --field-2: #1F2630; --field-3: #2A323D;
     --cobalt: #6F82F5; --cobalt-soft: #1B2350; --cobalt-ink: #A8B3F8; --on-cobalt: #0D1117;
-    --gain: #3DBE85; --loss: #F2766E;
+    --gain: #3DBE85; --loss: #F2766E; --on-loss: #0D1117;
     --s1: #6F82F5; --s2: #E8EAEE; --s3: #7C8697; --grid: #2A323D;
     color-scheme: dark;
   }
@@ -31,7 +31,7 @@
   --ground: #0D1117; --ink: #E8EAEE; --mute: #9AA3B2;
   --field: #161B22; --field-2: #1F2630; --field-3: #2A323D;
   --cobalt: #6F82F5; --cobalt-soft: #1B2350; --cobalt-ink: #A8B3F8; --on-cobalt: #0D1117;
-  --gain: #3DBE85; --loss: #F2766E;
+  --gain: #3DBE85; --loss: #F2766E; --on-loss: #0D1117;
   --s1: #6F82F5; --s2: #E8EAEE; --s3: #7C8697; --grid: #2A323D;
   color-scheme: dark;
 }
@@ -42,10 +42,14 @@ body {
   font: 400 16px/1.45 "Schibsted Grotesk", system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
-::selection { background: var(--cobalt); color: #fff; }
+::selection { background: var(--cobalt); color: var(--on-cobalt); }
 :focus-visible { outline: 2px solid var(--cobalt); outline-offset: 2px; }
 .wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px 96px; }
 @media (min-width: 900px) { .wrap { padding: 0 40px 96px; } }
+
+#health { display: none; background: var(--loss); color: var(--on-loss); padding: 16px; margin-top: 16px; font-weight: 700; }
+#health.on { display: block; }
+#health a { color: inherit; }
 
 header.top { display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline; justify-content: space-between; padding: 24px 0 16px; }
 .brand { font-weight: 700; font-size: 18px; }
@@ -62,19 +66,21 @@ button.primary:hover { background: var(--cobalt-ink); }
 
 .hero { display: grid; gap: 24px; padding: 24px 0 40px; grid-template-columns: 1fr; }
 @media (min-width: 900px) { .hero { grid-template-columns: 1.4fr 1fr; align-items: end; } }
-.big { font-weight: 800; font-size: clamp(52px, 11vw, 120px); letter-spacing: -0.04em; line-height: 0.95; margin-left: -0.04em; }
+.big { white-space: nowrap; font-weight: 800; font-size: clamp(44px, 9vw, 112px); letter-spacing: -0.04em; line-height: 0.95; margin-left: -0.04em; }
 .big.neg { color: var(--loss); }
 .lead { font-size: 20px; color: var(--mute); margin-top: 8px; max-width: 60ch; }
 .rankbox { background: var(--cobalt); color: var(--on-cobalt); padding: 24px; }
 .rankbox .r { font-weight: 800; font-size: clamp(52px, 8vw, 96px); letter-spacing: -0.04em; line-height: 0.95; }
-.rankbox .s { font-size: 16px; margin-top: 8px; opacity: 0.9; }
+.rankbox .s { font-size: 16px; margin-top: 8px; }
 
-.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; background: var(--ground); }
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; }
 @media (min-width: 700px) { .stats { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 1100px) { .stats { grid-template-columns: repeat(6, 1fr); } }
+@media (min-width: 1100px) { .stats.six { grid-template-columns: repeat(6, 1fr); } .stats.four { grid-template-columns: repeat(4, 1fr); } }
 .stat { background: var(--field); padding: 16px; }
 .stat .k { font-size: 14px; color: var(--mute); }
 .stat .v { font-size: 28px; font-weight: 700; margin-top: 4px; letter-spacing: -0.02em; }
+.stat .v.bad { color: var(--loss); }
+.stat .v.good { color: var(--gain); }
 .stat .d { font-size: 14px; color: var(--mute); margin-top: 2px; }
 
 section { padding-top: 64px; }
@@ -82,8 +88,15 @@ h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -0.02e
 .sub { color: var(--mute); margin: 8px 0 24px; max-width: 70ch; }
 .panel { background: var(--field); padding: 16px; }
 @media (min-width: 900px) { .panel { padding: 24px; } }
-.two { display: grid; gap: 2px; grid-template-columns: 1fr; }
-@media (min-width: 1000px) { .two { grid-template-columns: 1.5fr 1fr; } }
+.panel h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.two { display: grid; gap: 2px; grid-template-columns: 1fr; margin-top: 2px; }
+@media (min-width: 1000px) { .two { grid-template-columns: 1fr 1fr; } .two.wide { grid-template-columns: 1.5fr 1fr; } }
+
+.loss-plane { background: var(--ink); color: var(--ground); padding: 24px; display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .loss-plane { grid-template-columns: 1.2fr 1fr 1fr; align-items: end; } }
+.loss-plane .n { font-weight: 800; font-size: clamp(44px, 7vw, 80px); letter-spacing: -0.04em; line-height: 0.95; }
+.loss-plane .k { font-size: 14px; opacity: 0.8; margin-top: 8px; }
+.loss-plane .m { font-weight: 700; font-size: 28px; letter-spacing: -0.02em; }
 
 svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
 svg.chart text { fill: var(--mute); font: 12px "Schibsted Grotesk", sans-serif; font-variant-numeric: tabular-nums; }
@@ -97,33 +110,51 @@ td { padding: 8px; vertical-align: top; }
 tr:nth-child(even) td { background: var(--ground); }
 td.num, th.num { text-align: right; }
 tr.us td { background: var(--cobalt-soft) !important; font-weight: 700; }
-.ok { color: var(--gain); font-weight: 700; }
 .fail { color: var(--loss); font-weight: 700; }
 .why { color: var(--mute); }
 .scroll { max-height: 520px; overflow: auto; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 .filters button[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
 
-.machines { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-bottom: 2px; }
+.machines { display: grid; grid-template-columns: 1fr; gap: 2px; }
+@media (min-width: 700px) { .machines { grid-template-columns: repeat(3, 1fr); } }
 .mach { background: var(--field); padding: 16px; }
+.mach.neck { background: var(--cobalt); color: var(--on-cobalt); }
+.mach.neck .k { color: var(--on-cobalt); }
 .mach .n { font-weight: 800; font-size: 48px; letter-spacing: -0.03em; line-height: 1; }
-.mach .k { font-size: 14px; color: var(--mute); }
-.bar { height: 8px; background: var(--field-2); margin-top: 12px; }
+.mach .k { font-size: 14px; color: var(--mute); margin-top: 4px; }
+.mach .cap { font-size: 20px; font-weight: 700; margin-top: 12px; }
+.bar { height: 8px; background: var(--field-2); margin-top: 8px; }
+.mach.neck .bar { background: var(--cobalt-ink); }
 .bar > span { display: block; height: 100%; background: var(--cobalt); transform-origin: left; }
-.bar.hot > span { background: var(--loss); }
+.mach.neck .bar > span { background: var(--on-cobalt); }
+.bar.hot > span { background: var(--loss) !important; }
 
+.healthrow { display: grid; gap: 2px; grid-template-columns: 1fr; margin-top: 2px; }
+@media (min-width: 900px) { .healthrow { grid-template-columns: 1fr 3fr; } }
+.hstat { background: var(--field); padding: 24px; }
+.hstat .word { font-weight: 800; font-size: clamp(40px, 6vw, 64px); letter-spacing: -0.03em; line-height: 1; }
+.hstat .word.ok { color: var(--gain); } .hstat .word.late { color: var(--loss); }
+.hstat .k { font-size: 14px; color: var(--mute); margin-top: 8px; }
+.ticks { display: flex; gap: 2px; align-items: flex-end; height: 48px; margin-top: 16px; }
+.ticks span { flex: 1; background: var(--field-3); min-width: 2px; }
+.ticks span.slow { background: var(--loss); }
+.ticks span.act { background: var(--cobalt); }
+select { font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); background: var(--field-2); border: 0; padding: 8px 12px; }
+.rowctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; font-size: 14px; color: var(--mute); }
 #toast { position: fixed; left: 16px; bottom: 16px; max-width: 420px; background: var(--ink); color: var(--ground);
   padding: 16px; font-size: 14px; transform: translateY(8px); opacity: 0; pointer-events: none;
   transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1), transform 200ms cubic-bezier(0.23, 1, 0.32, 1); }
 #toast.on { opacity: 1; transform: none; }
 .empty { color: var(--mute); padding: 24px 0; }
-footer { color: var(--mute); font-size: 14px; padding-top: 64px; }
+footer { color: var(--mute); font-size: 14px; padding-top: 64px; max-width: 80ch; }
 a { color: var(--cobalt); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div id="health" role="alert"></div>
   <header class="top">
     <div>
       <div class="brand">Littlefield, team <span id="team">8a</span></div>
@@ -139,54 +170,83 @@ a { color: var(--cobalt); }
   <div class="hero">
     <div>
       <div class="big" id="net">$0</div>
-      <p class="lead" id="netLead">Cash minus debt.</p>
+      <p class="lead" id="netLead">Cash on hand minus debt.</p>
     </div>
     <div class="rankbox">
       <div class="r" id="rank">–</div>
       <div class="s" id="rankSub">Overall standing</div>
     </div>
   </div>
-
-  <div class="stats" id="stats"></div>
+  <div class="stats six" id="stats"></div>
 
   <section>
-    <h2>Where we stand</h2>
-    <p class="sub" id="standSub">Overall standing from the game, read every bot run.</p>
-    <div class="two">
-      <div class="panel"><div id="rankChart"></div></div>
-      <div class="panel scroll"><table id="standTable"></table></div>
+    <h2>Bot health</h2>
+    <p class="sub" id="healthSub">Is the bot running, on time and making changes that stick?</p>
+    <div class="healthrow">
+      <div class="hstat"><div class="word" id="hWord">–</div><div class="k" id="hWordSub"></div></div>
+      <div class="hstat"><div class="stats four" id="hStats" style="gap:2px"></div>
+        <div class="ticks" id="hTicks" aria-label="Gap between the last 48 runs"></div>
+        <div class="legend"><span><i style="background:var(--field-3)"></i>Run on time</span><span><i style="background:var(--cobalt)"></i>Run that changed something</span><span><i style="background:var(--loss)"></i>Gap over 15 minutes</span></div>
+      </div>
     </div>
   </section>
 
   <section>
-    <h2>Day 300 projection against the field</h2>
-    <p class="sub" id="projSub">Each team's leaderboard value, projected to day 300 from its trend over the last 10 game days.</p>
+    <h2>Money left on the table</h2>
+    <p class="sub">What late jobs and turned-away orders cost us right now, per game day.</p>
+    <div class="loss-plane" id="lossPlane"></div>
     <div class="two">
+      <div class="panel"><h3>Lead time against the 6-hour quote</h3><div id="ltChart"></div><div class="legend" id="ltLegend"></div></div>
+      <div class="panel"><h3>Estimated demand against orders accepted</h3><div id="demChart"></div><div class="legend" id="demLegend"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ranking history</h2>
+    <p class="sub" id="standSub">Our place on the leaderboard at every bot run since the bot first read it.</p>
+    <div class="stats four" id="rankStats"></div>
+    <div class="panel" style="margin-top:2px">
+      <div class="rowctl"><label for="cmpSel">Compare with</label><select id="cmpSel"></select></div>
+      <div id="rankChart"></div><div class="legend" id="rankLegend"></div>
+    </div>
+    <div class="two">
+      <div class="panel scroll"><h3>Leaderboard now</h3><table id="standTable"></table></div>
+      <div class="panel scroll"><h3>Our rank by game day</h3><table id="rankDayTable"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Day 300 forecast</h2>
+    <p class="sub" id="projSub">Our capacity model against a straight-line trend.</p>
+    <div class="stats four" id="projStats"></div>
+    <div class="two wide">
       <div class="panel"><div id="projChart"></div><div class="legend" id="projLegend"></div></div>
       <div class="panel scroll"><table id="projTable"></table></div>
     </div>
   </section>
 
   <section>
-    <h2>Cash and debt</h2>
-    <p class="sub">Cash on hand and debt after every bot run. The gap is what the leaderboard counts.</p>
-    <div class="panel"><div id="cashChart"></div><div class="legend" id="cashLegend"></div></div>
-  </section>
-
-  <section>
-    <h2>Machines per stage</h2>
-    <p class="sub">Installed machines, machines in transit, and yesterday's utilisation. Red bars are above 92%.</p>
+    <h2>Machines and the bottleneck</h2>
+    <p class="sub" id="neckSub">Capacity in jobs per day at 90% busy. The cobalt card is the station that limits output.</p>
     <div class="machines" id="machines"></div>
-    <div class="panel"><div id="machChart"></div><div class="legend" id="machLegend"></div></div>
+    <div class="two">
+      <div class="panel"><h3>Utilisation by station</h3><div id="utilChart"></div><div class="legend" id="utilLegend"></div></div>
+      <div class="panel"><h3>Machines installed</h3><div id="machChart"></div><div class="legend" id="machLegend"></div></div>
+    </div>
   </section>
 
   <section>
-    <h2>Throughput and price</h2>
-    <p class="sub">Jobs finished and accepted per day, lead time in hours, and revenue per job.</p>
-    <div class="two">
-      <div class="panel"><div id="flowChart"></div><div class="legend" id="flowLegend"></div></div>
-      <div class="panel"><div id="ltChart"></div><div class="legend" id="ltLegend"></div></div>
-    </div>
+    <h2>Cash, debt and payback</h2>
+    <p class="sub" id="paySub">Is the borrowing paying for itself?</p>
+    <div class="stats four" id="payStats"></div>
+    <div class="panel" style="margin-top:2px"><div id="cashChart"></div><div class="legend" id="cashLegend"></div></div>
+  </section>
+
+  <section>
+    <h2>Kit runway</h2>
+    <p class="sub" id="kitSub">Running out of kits stops the whole factory.</p>
+    <div class="stats four" id="kitStats"></div>
+    <div class="panel" style="margin-top:2px"><div id="kitChart"></div><div class="legend" id="kitLegend"></div></div>
   </section>
 
   <section>
@@ -199,6 +259,8 @@ a { color: var(--cobalt); }
   <footer>
     Data: <a id="srcLink" href="#" target="_blank" rel="noopener">state/dashboard.json</a> in the bot repo, refreshed every minute.
     Desktop alerts work while this tab is open. Email alerts come from the repo's issue #1.
+    Demand is the bot's estimate from days 1 to 50; after day 50 the WIP cap hides real demand.
+    The day 300 model assumes no more machine purchases and was within 6% of the final result from day 100 onward in simulated seasons.
   </footer>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -206,13 +268,15 @@ a { color: var(--cobalt); }
 <script>
 const REPO = "Sarthakchandra/littlefield";
 const SRC = `https://raw.githubusercontent.com/${REPO}/main/state/dashboard.json`;
-const GAME_END = 300;
+const GAME_END = 300, C3_PRICE = 1500, QUOTE_H = 6, MAX_H = 12, STALE_MIN = 25;
 const $ = (id) => document.getElementById(id);
 const fmt$ = (v) => (v < 0 ? "−$" : "$") + Math.abs(Math.round(v)).toLocaleString("en-US");
-const fmtK = (v) => { const a = Math.abs(v), s = v < 0 ? "−" : ""; return a >= 1e6 ? `${s}$${(a/1e6).toFixed(2)}M` : a >= 1e3 ? `${s}$${Math.round(a/1e3)}k` : `${s}$${Math.round(a)}`; };
+const fmtK = (v) => { const a = Math.abs(v), s = v < 0 ? "−" : ""; return a >= 1e6 ? `${s}$${(a / 1e6).toFixed(2)}M` : a >= 1e3 ? `${s}$${Math.round(a / 1e3)}k` : `${s}$${Math.round(a)}`; };
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const NAMES = ["Stuffers", "Testers", "Tuners"];
 let DATA = null, FILTER = "all";
+const store = { get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
 // ---------- theme ----------
 function applyTheme(t) {
@@ -221,24 +285,22 @@ function applyTheme(t) {
   $("themeBtn").textContent = dark ? "Light" : "Dark";
   if (DATA) render(DATA);
 }
-let theme = null; try { theme = localStorage.getItem("lf-theme"); } catch (e) {}
-applyTheme(theme);
+applyTheme(store.get("lf-theme"));
 $("themeBtn").onclick = () => {
-  const dark = document.documentElement.getAttribute("data-theme") === "dark" ||
-    (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
-  const next = dark ? "light" : "dark";
-  try { localStorage.setItem("lf-theme", next); } catch (e) {}
-  applyTheme(next);
+  const a = document.documentElement.getAttribute("data-theme");
+  const dark = a === "dark" || (!a && matchMedia("(prefers-color-scheme: dark)").matches);
+  store.set("lf-theme", dark ? "light" : "dark"); applyTheme(dark ? "light" : "dark");
 };
 
 // ---------- tiny SVG line chart ----------
 function lineChart(el, series, opts = {}) {
-  const W = 760, H = opts.h || 260, P = { l: 64, r: 96, t: 12, b: 28 };
-  const pts = series.flatMap((s) => s.pts);
+  const W = opts.W || 760, H = opts.h || 260, P = { l: 64, r: 96, t: 12, b: 28 };
+  const pts = series.flatMap((s) => s.pts).filter((p) => p[1] != null && isFinite(p[1]));
   if (pts.length < (opts.minPts || 1) || (opts.minPts && new Set(pts.map((p) => p[0])).size < 2)) { el.innerHTML = `<p class="empty">${opts.empty || "No data yet."}</p>`; return; }
+  const hl = opts.hlines || [];
   let x0 = Math.min(...pts.map((p) => p[0])), x1 = Math.max(...pts.map((p) => p[0]), opts.xMax || -Infinity);
-  let y0 = Math.min(...pts.map((p) => p[1]), opts.yMin ?? Infinity), y1 = Math.max(...pts.map((p) => p[1]));
-  if (opts.zero !== false) { y0 = Math.min(y0, 0); }
+  let y0 = Math.min(...pts.map((p) => p[1]), opts.yMin ?? Infinity, ...hl.map((h) => h.y)), y1 = Math.max(...pts.map((p) => p[1]), ...hl.map((h) => h.y));
+  if (opts.zero !== false) y0 = Math.min(y0, 0);
   if (x1 === x0) x1 = x0 + 1; if (y1 === y0) y1 = y0 + 1;
   const pad = (y1 - y0) * 0.06; y1 += pad; if (y0 < 0 || opts.zero === false) y0 -= pad;
   const X = (x) => P.l + ((x - x0) / (x1 - x0)) * (W - P.l - P.r);
@@ -246,20 +308,21 @@ function lineChart(el, series, opts = {}) {
   const ticks = (a, b, n) => { const st = Math.pow(10, Math.floor(Math.log10((b - a) / n || 1))); const m = [1, 2, 5, 10].find((k) => (b - a) / (st * k) <= n) * st; const out = []; for (let v = Math.ceil(a / m) * m; v <= b; v += m) out.push(v); return out; };
   const yf = opts.yFmt || ((v) => v.toLocaleString("en-US"));
   let g = "";
-  for (const v of ticks(y0, y1, 5)) g += `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css("--grid")}" stroke-width="1"/><text x="${P.l - 8}" y="${Y(v) + 4}" text-anchor="end">${yf(v)}</text>`;
+  for (const v of ticks(y0, y1, 5).filter((v) => opts.yFloor == null || v >= opts.yFloor)) g += `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css("--grid")}" stroke-width="1"/><text x="${P.l - 8}" y="${Y(v) + 4}" text-anchor="end">${yf(v)}</text>`;
   for (const v of ticks(x0, x1, 8)) g += `<text x="${X(v)}" y="${H - 8}" text-anchor="middle">${Math.round(v)}</text>`;
-  if (opts.vline) g += `<line x1="${X(opts.vline)}" x2="${X(opts.vline)}" y1="${P.t}" y2="${H - P.b}" stroke="${css("--mute")}" stroke-dasharray="3 4"/>`;
+  for (const h of hl) g += `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(h.y)}" y2="${Y(h.y)}" stroke="${h.color}" stroke-width="1.5" stroke-dasharray="4 4"/><text class="lbl" x="${W - P.r + 6}" y="${Y(h.y) + 4}" style="fill:${h.color}">${esc(h.label)}</text>`;
   for (const s of series) {
-    if (!s.pts.length) continue;
-    const d = s.pts.map((p, i) => (i ? (s.step ? `H${X(p[0])}V${Y(p[1])}` : `L${X(p[0])},${Y(p[1])}`) : `M${X(p[0])},${Y(p[1])}`)).join("");
+    const sp = s.pts.filter((p) => p[1] != null && isFinite(p[1]));
+    if (!sp.length) continue;
+    const d = sp.map((p, i) => (i ? (s.step ? `H${X(p[0])}V${Y(p[1])}` : `L${X(p[0])},${Y(p[1])}`) : `M${X(p[0])},${Y(p[1])}`)).join("");
     g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.w || 2}" ${s.dash ? `stroke-dasharray="${s.dash}"` : ""} stroke-linejoin="round"/>`;
-    if (s.label) { const p = s.pts[s.pts.length - 1]; g += `<text class="lbl" x="${X(p[0]) + 6}" y="${Y(p[1]) + 4}" style="fill:${s.color}">${esc(s.label)}</text>`; }
+    if (s.label) { const p = sp[sp.length - 1]; g += `<text class="lbl" x="${X(p[0]) + 6}" y="${Y(p[1]) + 4 + (s.dy || 0)}" style="fill:${s.color}">${esc(s.label)}</text>`; }
   }
   el.innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.aria || "chart")}">${g}</svg>`;
 }
 function legend(el, items) { el.innerHTML = items.map(([c, t, dash]) => `<span><i style="background:${dash ? "transparent" : c};border-top:${dash ? `2px dashed ${c}` : "0"}"></i>${esc(t)}</span>`).join(""); }
+const stat = (k, v, d, cls = "") => `<div class="stat"><div class="k">${k}</div><div class="v ${cls}">${v}</div><div class="d">${d || ""}</div></div>`;
 
-// ---------- projections ----------
 function fit(points, fromDay) {
   const p = points.filter((q) => q[0] >= fromDay);
   if (p.length < 3) return null;
@@ -268,6 +331,9 @@ function fit(points, fromDay) {
   const b = p.reduce((a, q) => a + (q[0] - mx) * (q[1] - my), 0) / sxx;
   return { a: my - b * mx, b };
 }
+const lateLoss = (h) => (h.contract === 3 && h.rev != null && h.done != null) ? Math.max(0, C3_PRICE - h.rev) * h.done : null;
+const awayLoss = (h) => (h.demand != null && h.acc != null && h.margin != null) ? Math.max(0, h.demand - h.acc) * h.margin : null;
+const kitUse = (h) => 60 * Math.max(h.acc || 0, h.done || 0);
 
 // ---------- render ----------
 function render(D) {
@@ -277,6 +343,20 @@ function render(D) {
   $("team").textContent = team;
   const ago = D.updated ? Math.round((Date.now() - Date.parse(D.updated)) / 60000) : null;
   $("meta").textContent = `Day ${L.day ?? "?"} of 300 · last bot run ${ago == null ? "unknown" : ago <= 1 ? "just now" : ago + " min ago"} · ${H.length} runs logged`;
+
+  // health
+  const lastActs = (D.actions || []).filter((a) => a.t === D.updated);
+  const fails = lastActs.filter((a) => !a.ok);
+  const stale = ago != null && ago > STALE_MIN && (L.day || 0) < GAME_END;
+  const hb = $("health");
+  if (stale || fails.length) {
+    hb.innerHTML = stale
+      ? `The bot hasn't run for ${ago} minutes. It normally runs every 9 or 10. Check the <a href="https://github.com/${REPO}/actions" target="_blank" rel="noopener">Actions tab</a> and restart the littlefield-loop workflow if nothing is running.`
+      : `${fails.length} change${fails.length > 1 ? "s" : ""} failed in the last run: ${esc(fails.map((a) => a.act).join("; "))}. The game said: ${esc(fails[0].res)}`;
+    hb.classList.add("on");
+  } else hb.classList.remove("on");
+
+  // hero
   const net = (L.cash || 0) - (L.debt || 0);
   $("net").textContent = fmt$(net); $("net").classList.toggle("neg", net < 0);
   const prev = H.find((h) => h.day >= (L.day || 0) - 1) || H[0] || {};
@@ -287,68 +367,190 @@ function render(D) {
     const r0 = (H.slice().reverse().find((h) => h.rank && h.day <= (L.day || 0) - 1) || {}).rank;
     $("rankSub").textContent = `Overall standing${r0 ? `, ${r0 > L.rank ? "up " + (r0 - L.rank) : r0 < L.rank ? "down " + (L.rank - r0) : "no change"} since a game day ago` : ""}. Leader ${fmtK(L.leader)}.`;
   } else { $("rank").textContent = "–"; $("rankSub").textContent = "Standing not read yet"; }
+  $("stats").innerHTML = [
+    stat("Cash on hand", fmtK(L.cash || 0)),
+    stat("Debt", fmtK(L.debt || 0), L.int_day ? `${fmt$(L.int_day)} interest a game day` : "20% a year"),
+    stat("Contract", L.contract ? `C${L.contract}` : "–", L.lt_h != null ? `lead ${L.lt_h.toFixed(1)} h` : ""),
+    stat("Revenue per job", L.rev != null ? fmt$(L.rev) : "–", L.contract === 3 ? "full price $1,500" : ""),
+    stat("Jobs done per day", L.done ?? "–", L.acc != null ? `${L.acc} accepted` : ""),
+    stat("Day 300 model", L.proj300 != null ? fmtK(L.proj300) : "–", "if we buy nothing more"),
+  ].join("");
 
-  const stats = [
-    ["Cash on hand", fmtK(L.cash || 0), ""],
-    ["Debt", fmtK(L.debt || 0), "20% a year"],
-    ["Contract", L.contract ? `C${L.contract}` : "–", L.lt_h != null ? `lead ${L.lt_h.toFixed(1)} h` : ""],
-    ["Revenue per job", L.rev != null ? fmt$(L.rev) : "–", L.contract === 3 ? "max $1,500" : ""],
-    ["Jobs done per day", L.done ?? "–", L.acc != null ? `${L.acc} accepted` : ""],
-    ["Kits on hand", L.inv != null ? L.inv.toLocaleString("en-US") : "–", `WIP cap ${L.wip ?? "–"}`],
-  ];
-  $("stats").innerHTML = stats.map(([k, v, d]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join("");
+  // money left on the table
+  const ll = lateLoss(L), al = awayLoss(L);
+  let lateCum = 0, awayCum = 0;
+  for (let i = 1; i < H.length; i++) {
+    const dt = H[i].day - H[i - 1].day; if (dt <= 0 || dt > 2) continue;
+    const a = lateLoss(H[i]), b = awayLoss(H[i]);
+    if (a != null) lateCum += a * dt; if (b != null) awayCum += b * dt;
+  }
+  const tot = (ll || 0) + (al || 0);
+  $("lossPlane").innerHTML = `<div><div class="n">${ll == null && al == null ? "–" : fmt$(tot)}</div><div class="k">lost per game day right now</div></div>
+    <div><div class="m">${ll == null ? "–" : fmt$(ll)}</div><div class="k">from late jobs: ${L.done ?? "?"} jobs a day at ${L.rev != null ? fmt$(L.rev) : "?"} instead of $1,500. ${fmtK(lateCum)} so far.</div></div>
+    <div><div class="m">${al == null ? "–" : fmt$(al)}</div><div class="k">from orders turned away: about ${L.demand != null && L.acc != null ? Math.max(0, Math.round(L.demand - L.acc)) : "?"} a day at ${L.margin != null ? fmt$(L.margin) : "?"} margin each.${awayCum ? " " + fmtK(awayCum) + " so far." : ""}</div></div>`;
+  const HL = H.filter((h) => h.lt_h != null && h.contract === 3 && h.rev > 0 && h.lt_h <= 24);
+  lineChart($("ltChart"), [{ pts: HL.map((h) => [h.day, h.lt_h]), color: css("--cobalt"), label: L.lt_h != null ? `${L.lt_h.toFixed(1)}h` : "" }],
+    { h: 240, aria: "Lead time in hours", yFmt: (v) => v + "h", hlines: [{ y: QUOTE_H, label: "Full pay", color: css("--gain") }, { y: MAX_H, label: "$0", color: css("--loss") }], empty: "Lead time shows once contract 3 is running." });
+  legend($("ltLegend"), [[css("--cobalt"), "Average lead time, contract 3 jobs"], [css("--gain"), "6h: full $1,500", true], [css("--loss"), "12h: paid nothing", true]]);
+  const HD = H.filter((h) => h.acc != null);
+  lineChart($("demChart"), [
+    { pts: H.filter((h) => h.demand != null).map((h) => [h.day, h.demand]), color: css("--s3"), label: "Demand", dash: "5 4" },
+    { pts: HD.map((h) => [h.day, h.acc]), color: css("--cobalt"), label: "Accepted", dy: 10 },
+  ], { h: 240, aria: "Orders per day", empty: "Waiting for the next bot run." });
+  legend($("demLegend"), [[css("--s3"), "Estimated demand", true], [css("--cobalt"), "Orders accepted per day"]]);
 
-  // standing
-  lineChart($("rankChart"), [{ pts: H.filter((h) => h.rank).map((h) => [h.day, h.rank]), color: css("--cobalt"), label: L.rank ? `#${L.rank}` : "", step: true }],
-    { invert: true, zero: false, yMin: 1, minPts: 2, aria: "Rank over time", yFmt: (v) => "#" + Math.round(v), empty: "The rank line fills in as more bot runs read the leaderboard." });
+  // health widget
+  const runs = H.filter((h) => h.t).map((h) => Date.parse(h.t)).filter((x) => !isNaN(x));
+  const gaps = runs.slice(1).map((t, i) => (t - runs[i]) / 60000);
+  const recent = gaps.slice(-48);
+  const med = recent.length ? recent.slice().sort((a, b) => a - b)[Math.floor(recent.length / 2)] : null;
+  const runs3h = runs.filter((t) => Date.now() - t < 3 * 3600e3).length;
+  const actT = new Set((D.actions || []).map((a) => a.t));
+  const failsDay = (D.actions || []).filter((a) => !a.ok && a.day >= (L.day || 0) - 1).length;
+  const over = (L.day || 0) >= GAME_END;
+  const word = over ? "Finished" : ago == null ? "Unknown" : ago > STALE_MIN ? "Stopped" : ago > 15 ? "Late" : "Running";
+  $("hWord").textContent = word;
+  $("hWord").className = "word " + (word === "Running" || word === "Finished" ? "ok" : "late");
+  $("hWordSub").textContent = ago == null ? "" : `Last run ${ago <= 1 ? "just now" : ago + " min ago"}. Next due in about ${Math.max(0, Math.round((med || 9.5) - ago))} min.`;
+  $("hStats").innerHTML = [
+    stat("Usual gap between runs", med != null ? `${med.toFixed(1)} min` : "–", `${runs3h} runs in the last 3 hours`),
+    stat("Failed changes, last game day", String(failsDay), failsDay ? "see Failures below" : "every change went through", failsDay ? "bad" : "good"),
+    stat("WIP cap setting", L.wip_mode === "probe" ? "Looser" : L.wip_mode === "safe" ? "Safe" : "–", L.wip_mode ? `price/job ${L.rev2d ? fmt$(L.rev2d) : "–"} over 2 days, floor $1,320` : "contract 3 only"),
+    stat("New loans", L.loans_locked ? "Locked" : "Allowed", L.loans_locked ? "repayment has started" : "until repayment starts or day 150"),
+  ].join("");
+  $("hTicks").innerHTML = H.slice(-49).slice(1).map((h, i, arr) => {
+    const g = recent[recent.length - arr.length + i];
+    const hgt = g == null ? 4 : Math.max(4, Math.min(48, g * 2.4));
+    return `<span class="${g > 15 ? "slow" : actT.has(h.t) ? "act" : ""}" style="height:${hgt}px" title="day ${h.day}: ${g == null ? "?" : g.toFixed(1)} min after the previous run"></span>`; }).join("");
+  $("healthSub").textContent = `The bot runs every 9 to 10 minutes on GitHub Actions and restarts itself every 5.5 hours. Bar height is the gap before each run.`;
+
+  // ranking history
+  const RH = H.filter((h) => h.rank);
   const S = D.standings || [];
   const ourIdx = S.findIndex((r) => String(r.team).toLowerCase() === team.toLowerCase());
-  const show = S.map((r, i) => ({ ...r, i })).filter((r) => r.i < 10 || Math.abs(r.i - ourIdx) <= 2);
-  $("standTable").innerHTML = S.length ? `<tr><th class="num">#</th><th>Team</th><th class="num">Value</th></tr>` + show.map((r, k) =>
-    (k && r.i - show[k - 1].i > 1 ? `<tr><td></td><td class="why">…</td><td></td></tr>` : "") +
-    `<tr class="${r.i === ourIdx ? "us" : ""}"><td class="num">${r.i + 1}</td><td>${esc(r.team)}</td><td class="num">${fmt$(r.cash)}</td></tr>`).join("")
+  // every team's rank at each leaderboard snapshot, from standings_hist
+  const SHall = D.standings_hist || {};
+  const snapDays = [...new Set(Object.values(SHall).flatMap((p) => p.map((q) => q[0])))].sort((a, b) => a - b);
+  const rankAt = {};
+  for (const dd of snapDays) {
+    const vals = Object.entries(SHall).map(([t, p]) => [t, (p.find((q) => q[0] === dd) || [])[1]]).filter((x) => x[1] != null).sort((a, b) => b[1] - a[1]);
+    vals.forEach(([t], i) => { (rankAt[t] = rankAt[t] || []).push([dd, i + 1]); });
+  }
+  const sel = $("cmpSel"), teams = S.map((r) => r.team).filter((t) => String(t).toLowerCase() !== team.toLowerCase());
+  const cur = sel.value || store.get("lf-cmp") || (teams[0] ?? "");
+  sel.innerHTML = `<option value="">Nobody</option>` + teams.map((t, i) => `<option value="${esc(t)}" ${t === cur ? "selected" : ""}>#${S.findIndex((r) => r.team === t) + 1} ${esc(t)}</option>`).join("");
+  sel.onchange = () => { store.set("lf-cmp", sel.value); render(DATA); };
+  const cmp = sel.value;
+  const rs = [{ pts: RH.map((h) => [h.day, h.rank]), color: css("--cobalt"), label: L.rank ? `Us #${L.rank}` : "Us", step: true, w: 3 }];
+  if (cmp && rankAt[cmp]) rs.push({ pts: rankAt[cmp], color: css("--s3"), label: `${cmp} #${rankAt[cmp].at(-1)[1]}`, step: true, w: 1.5 });
+  lineChart($("rankChart"), rs, { invert: true, zero: false, yMin: 1, yFloor: 1, minPts: 2, W: 1200, h: 300, aria: "Rank over time", yFmt: (v) => "#" + Math.round(v), empty: "The rank line fills in as more bot runs read the leaderboard." });
+  legend($("rankLegend"), [[css("--cobalt"), "Our rank"]].concat(cmp ? [[css("--s3"), cmp]] : []).concat([[css("--mute"), "Higher on the chart is better"]]));
+  if (RH.length) {
+    const best = RH.reduce((a, h) => (h.rank < a.rank ? h : a)), worst = RH.reduce((a, h) => (h.rank > a.rank ? h : a));
+    const first = RH[0], mv = first.rank - L.rank;
+    $("rankStats").innerHTML = [
+      stat("Now", `#${L.rank}`, `of ${L.teams} teams`),
+      stat("Best", `#${best.rank}`, `day ${best.day}`, "good"),
+      stat("Worst", `#${worst.rank}`, `day ${worst.day}`, "bad"),
+      stat("Since day " + Math.round(first.day), mv === 0 ? "No change" : mv > 0 ? `Up ${mv}` : `Down ${-mv}`, `from #${first.rank}`, mv > 0 ? "good" : mv < 0 ? "bad" : ""),
+    ].join("");
+  } else $("rankStats").innerHTML = "";
+  $("standSub").textContent = RH.length ? `Every leaderboard reading since day ${RH[0].day}, ${RH.length} in all. The game only shows the current standing, so nothing before the bot's first reading exists.` : "Our place on the leaderboard at every bot run.";
+  $("standTable").innerHTML = S.length ? `<tr><th class="num">#</th><th>Team</th><th class="num">Cash minus debt</th></tr>` + S.map((r, i) =>
+    `<tr class="${i === ourIdx ? "us" : ""}"><td class="num">${i + 1}</td><td>${esc(r.team)}</td><td class="num">${fmt$(r.cash)}</td></tr>`).join("")
     : `<tr><td class="empty">The full leaderboard appears after the next bot run.</td></tr>`;
-  $("standSub").textContent = S.length ? `${S.length} teams. Showing the top 10 and the teams around us.` : "Overall standing from the game, read every bot run.";
+  const byDay = {};
+  for (const h of RH) byDay[Math.floor(h.day)] = h;      // last reading of each game day
+  const dayRows = Object.values(byDay).sort((a, b) => b.day - a.day);
+  $("rankDayTable").innerHTML = dayRows.length ? `<tr><th class="num">Day</th><th class="num">Rank</th><th class="num">Us</th><th class="num">Leader</th><th class="num">Gap</th></tr>` + dayRows.map((h, i) => {
+    const prevR = dayRows[i + 1]?.rank, d = prevR ? prevR - h.rank : 0;
+    const us = h.our_score ?? (h.cash - h.debt);
+    return `<tr><td class="num">${Math.floor(h.day)}</td><td class="num">#${h.rank}${d ? ` <span class="${d > 0 ? "" : "why"}">${d > 0 ? "+" + d : d}</span>` : ""}</td><td class="num">${fmtK(us)}</td><td class="num">${fmtK(h.leader)}</td><td class="num">${fmtK(h.leader - us)}</td></tr>`; }).join("")
+    : `<tr><td class="empty">No readings yet.</td></tr>`;
 
-  // projection
-  const SH = D.standings_hist || {};
-  const day = L.day || 0, from = day - 10;
-  const proj = Object.entries(SH).map(([t, pts]) => { const f = fit(pts, from); const lastV = pts[pts.length - 1]?.[1] ?? 0; return { t, pts, f, now: lastV, p300: f ? f.a + f.b * GAME_END : null }; })
+  // forecast
+  const SH = D.standings_hist || {}, day = L.day || 0;
+  const trend = Object.entries(SH).map(([t, pts]) => { const f = fit(pts, day - 10); return { t, pts, now: pts[pts.length - 1]?.[1] ?? 0, p300: f ? f.a + f.b * GAME_END : null }; })
     .filter((r) => r.p300 != null).sort((a, b) => b.p300 - a.p300);
-  const usP = proj.find((r) => r.t.toLowerCase() === team.toLowerCase());
-  const top = proj.filter((r) => r !== usP).slice(0, 5);
-  const shades = [css("--s2"), css("--s3"), css("--s3"), css("--s3"), css("--s3")];
+  const usT = trend.find((r) => r.t.toLowerCase() === team.toLowerCase());
+  const rivals = trend.filter((r) => r !== usT);
+  const modelRank = L.proj300 != null && rivals.length ? rivals.filter((r) => r.p300 > L.proj300).length + 1 : null;
+  $("projStats").innerHTML = [
+    stat("Our model", L.proj300 != null ? fmtK(L.proj300) : "–", "capacity we own or have ordered, demand curve, interest"),
+    stat("Straight-line trend", usT ? fmtK(usT.p300) : "–", "last 10 game days, carried forward"),
+    stat("Rank on our model", modelRank ? `#${modelRank}` : "–", rivals.length ? `against ${rivals.length} rivals' trends` : "needs leaderboard history"),
+    stat("Projected leader", rivals[0] ? fmtK(rivals[0].p300) : "–", rivals[0] ? esc(rivals[0].t) : ""),
+  ].join("");
+  $("projSub").textContent = "The straight line punishes teams that borrowed to build capacity, which includes us. The model counts the cash our machines will earn from here, so it is the fairer number for us. Rivals only have the straight line, since we can't see their factories.";
   const ser = [];
-  top.forEach((r, i) => { ser.push({ pts: r.pts, color: shades[i], w: 1.5 }); ser.push({ pts: [[r.pts[r.pts.length - 1][0], r.now], [GAME_END, r.p300]], color: shades[i], w: 1.5, dash: "4 4", label: i < 2 ? r.t : "" }); });
-  if (usP) { ser.push({ pts: usP.pts, color: css("--cobalt"), w: 3 }); ser.push({ pts: [[usP.pts[usP.pts.length - 1][0], usP.now], [GAME_END, usP.p300]], color: css("--cobalt"), w: 3, dash: "6 4", label: team }); }
-  lineChart($("projChart"), ser, { xMax: GAME_END, aria: "Projected leaderboard value to day 300", yFmt: fmtK, empty: "Projections need about 3 game days of leaderboard history (roughly 1.5 hours after the first standing is read)." });
-  legend($("projLegend"), usP ? [[css("--cobalt"), "Us"], [css("--s2"), "Projected #1 rival"], [css("--s3"), "Next four"], [css("--mute"), "Projection", true]] : []);
-  const usRank = usP ? proj.indexOf(usP) + 1 : null;
-  $("projSub").textContent = usP ? `On current trends we finish #${usRank} of ${proj.length} with ${fmtK(usP.p300)}. Trend from the last 10 game days; it ignores machines we have yet to sell.` : "Each team's leaderboard value, projected to day 300 from its trend over the last 10 game days.";
-  $("projTable").innerHTML = proj.length ? `<tr><th class="num">#</th><th>Team</th><th class="num">Now</th><th class="num">Day 300</th></tr>` +
-    proj.slice(0, 12).concat(usP && usRank > 12 ? [usP] : []).map((r) => `<tr class="${r === usP ? "us" : ""}"><td class="num">${proj.indexOf(r) + 1}</td><td>${esc(r.t)}</td><td class="num">${fmtK(r.now)}</td><td class="num">${fmtK(r.p300)}</td></tr>`).join("")
-    : `<tr><td class="empty">No projection yet.</td></tr>`;
+  const shades = [css("--s2"), css("--s3"), css("--s3"), css("--s3"), css("--s3")];
+  rivals.slice(0, 5).forEach((r, i) => { ser.push({ pts: r.pts, color: shades[i], w: 1.5 }); ser.push({ pts: [[r.pts[r.pts.length - 1][0], r.now], [GAME_END, r.p300]], color: shades[i], w: 1.5, dash: "4 4", label: i < 2 ? r.t : "" }); });
+  const ourPts = H.filter((h) => h.cash != null).map((h) => [h.day, h.cash - h.debt]);
+  if (ourPts.length) {
+    ser.push({ pts: ourPts, color: css("--cobalt"), w: 3 });
+    if (L.proj300 != null) ser.push({ pts: [[day, net], [GAME_END, L.proj300]], color: css("--cobalt"), w: 3, dash: "6 4", label: "Model" });
+    if (usT) ser.push({ pts: [[day, net], [GAME_END, usT.p300]], color: css("--loss"), w: 1.5, dash: "3 4", label: "Trend" });
+  }
+  lineChart($("projChart"), ser, { xMax: GAME_END, aria: "Day 300 forecast", yFmt: fmtK, empty: "Waiting for data." });
+  legend($("projLegend"), [[css("--cobalt"), "Us, and our model", ], [css("--loss"), "Our straight-line trend", true], [css("--s2"), "Projected #1 rival"], [css("--s3"), "Next four rivals"]]);
+  const rows = rivals.slice(0, 10).map((r) => ({ t: r.t, now: r.now, p: r.p300 }));
+  if (L.proj300 != null) rows.push({ t: team + " (model)", now: net, p: L.proj300, us: true });
+  rows.sort((a, b) => b.p - a.p);
+  $("projTable").innerHTML = rows.length ? `<tr><th class="num">#</th><th>Team</th><th class="num">Now</th><th class="num">Day 300</th></tr>` +
+    rows.map((r, i) => `<tr class="${r.us ? "us" : ""}"><td class="num">${i + 1}</td><td>${esc(r.t)}</td><td class="num">${fmtK(r.now)}</td><td class="num">${fmtK(r.p)}</td></tr>`).join("")
+    : `<tr><td class="empty">Rival projections need about 3 game days of leaderboard history.</td></tr>`;
 
-  // cash
+  // machines and bottleneck
+  const cap = L.cap || [], capE = L.cap_eff || [], util = L.util || [], q = L.q || [];
+  const neck = cap.length ? cap.indexOf(Math.min(...cap)) : -1;
+  $("machines").innerHTML = NAMES.map((n, i) => { const u = util[i]; const oo = (L.on_order || [])[i];
+    return `<div class="mach ${i === neck ? "neck" : ""}"><div class="n">${(L.m || [])[i] ?? "–"}</div><div class="k">${n}${oo ? `, ${oo} on the way` : ""}${i === neck ? ". Bottleneck" : ""}</div>
+    <div class="cap">${cap[i] != null ? cap[i] + " jobs/day" : "capacity n/a"}</div><div class="k">${capE[i] != null && capE[i] !== cap[i] ? `${capE[i]} once orders land` : "no machines in transit"}</div>
+    <div class="bar ${u > 0.92 ? "hot" : ""}"><span style="transform:scaleX(${Math.min(1, u || 0)})"></span></div>
+    <div class="k">${u != null ? Math.round(u * 100) + "% busy yesterday" : "utilisation n/a"}${q[i] != null ? `, ${q[i]} jobs queued` : ""}</div></div>`; }).join("");
+  $("neckSub").textContent = neck >= 0 ? `${NAMES[neck]} limit us to ${cap[neck]} jobs a day against estimated demand of ${L.demand ?? "?"}. After machines in transit land, the limit is ${Math.min(...capE)} a day (${NAMES[capE.indexOf(Math.min(...capE))].toLowerCase()}). Capacity assumes 90% busy.` : "Capacity in jobs per day at 90% busy. The cobalt card is the station that limits output.";
+  const cols = [css("--s1"), css("--s2"), css("--s3")];
+  lineChart($("utilChart"), [0, 1, 2].map((i) => ({ pts: H.filter((h) => h.util).map((h) => [h.day, Math.round(h.util[i] * 100)]), color: cols[i], label: NAMES[i], dy: (i - 1) * 10 })),
+    { h: 220, aria: "Utilisation by station", yFmt: (v) => v + "%", hlines: [{ y: 92, label: "92%", color: css("--loss") }] });
+  legend($("utilLegend"), NAMES.map((n, i) => [cols[i], n]));
+  lineChart($("machChart"), [0, 1, 2].map((i) => ({ pts: H.map((h) => [h.day, (h.m || [])[i]]), color: cols[i], step: true, label: NAMES[i], dy: (i - 1) * 6 })), { h: 220, aria: "Machines per station" });
+  legend($("machLegend"), NAMES.map((n, i) => [cols[i], n]));
+
+  // payback
+  const firstLoan = H.findIndex((h) => h.debt > 0);
+  const base = firstLoan > 0 ? H.slice(0, firstLoan).reverse().find((h) => h.done != null) : null;
+  const margin = L.margin ?? (L.rev != null ? L.rev - 600 : null);
+  const extra = base && L.done != null && margin != null ? (L.done - base.done) * margin : null;
+  const cs = L.cs || {};
+  const fin = (cs.debt_interest || 0) + (cs.loan_fee || 0);
+  $("payStats").innerHTML = [
+    stat("Interest per game day", L.int_day != null ? fmt$(L.int_day) : "–", `on ${fmtK(L.debt || 0)} at 20% a year`),
+    stat("Extra margin per game day", extra != null ? fmt$(extra) : "–", base ? `${L.done} jobs now against ${base.done} before borrowing on day ${Math.round(H[firstLoan].day)}` : "needs pre-loan history", extra != null ? (extra > (L.int_day || 0) ? "good" : "bad") : ""),
+    stat("Paid for borrowing so far", cs.debt_interest != null ? fmtK(fin) : "–", cs.debt_interest != null ? `${fmtK(cs.debt_interest)} interest, ${fmtK(cs.loan_fee || 0)} fees` : "from the game's cash report"),
+    stat("Verdict", extra == null || !L.int_day ? "–" : extra > L.int_day ? `${(extra / L.int_day).toFixed(1)}×` : "Not yet", extra == null || !L.int_day ? "" : extra > L.int_day ? "extra margin over interest: the debt pays" : "interest still beats the extra margin", extra == null || !L.int_day ? "" : extra > L.int_day ? "good" : "bad"),
+  ].join("");
   lineChart($("cashChart"), [
     { pts: H.map((h) => [h.day, h.cash]), color: css("--cobalt"), label: "Cash" },
     { pts: H.map((h) => [h.day, h.debt]), color: css("--loss"), label: "Debt", step: true },
     { pts: H.map((h) => [h.day, h.cash - h.debt]), color: css("--s2"), label: "Net", w: 1.5 },
-  ], { aria: "Cash and debt by game day", yFmt: fmtK, h: 300 });
+  ], { aria: "Cash and debt by game day", yFmt: fmtK, h: 320, W: 1200 });
   legend($("cashLegend"), [[css("--cobalt"), "Cash on hand"], [css("--loss"), "Debt"], [css("--s2"), "Net (cash minus debt)"]]);
 
-  // machines
-  const names = ["Stuffers", "Testers", "Tuners"], util = L.util || [];
-  $("machines").innerHTML = names.map((n, i) => { const u = util[i]; return `<div class="mach"><div class="n">${(L.m || [])[i] ?? "–"}</div><div class="k">${n}${(L.on_order || [])[i] ? ` · ${(L.on_order)[i]} on the way` : ""}</div><div class="bar ${u > 0.92 ? "hot" : ""}"><span style="transform:scaleX(${Math.min(1, u || 0)})"></span></div><div class="k" style="margin-top:4px">${u != null ? Math.round(u * 100) + "% busy yesterday" : "utilisation n/a"}</div></div>`; }).join("");
-  lineChart($("machChart"), [0, 1, 2].map((i) => ({ pts: H.map((h) => [h.day, (h.m || [])[i]]), color: [css("--s1"), css("--s2"), css("--s3")][i], step: true, label: names[i] })), { aria: "Machines per station", h: 220 });
-  legend($("machLegend"), [[css("--s1"), "Stuffers"], [css("--s2"), "Testers"], [css("--s3"), "Tuners"]]);
-
-  // flow
-  const HF = H.filter((h) => h.done != null);
-  lineChart($("flowChart"), [{ pts: HF.map((h) => [h.day, h.done]), color: css("--cobalt"), label: "Done" }, { pts: HF.filter((h) => h.acc != null).map((h) => [h.day, h.acc]), color: css("--s3"), label: "Accepted" }], { aria: "Jobs per day", h: 240 });
-  legend($("flowLegend"), [[css("--cobalt"), "Jobs done per day"], [css("--s3"), "Orders accepted per day"]]);
-  lineChart($("ltChart"), [{ pts: HF.filter((h) => h.rev != null && h.day >= 60).map((h) => [h.day, h.rev]), color: css("--cobalt"), label: "Rev" }], { aria: "Revenue per job", h: 240, yFmt: (v) => "$" + Math.round(v), zero: false });
-  legend($("ltLegend"), [[css("--cobalt"), "Revenue per job, day 60 on"]]);
+  // kits
+  const use = kitUse(L), inv = L.inv;
+  const runway = use && inv != null ? inv / use : null;
+  const due = L.kits_due_in, onOrd = L.kits_on_order || 0;
+  const risk = runway != null && ((onOrd > 0 && due != null && runway < due) || (!onOrd && runway < 4.5));
+  $("kitStats").innerHTML = [
+    stat("Kits on hand", inv != null ? inv.toLocaleString("en-US") : "–", inv != null ? `${Math.floor(inv / 60)} jobs' worth` : ""),
+    stat("Using per day", use ? use.toLocaleString("en-US") : "–", "60 kits a job accepted"),
+    stat("Runway", runway != null ? `${runway.toFixed(1)} days` : "–", risk ? "runs out before the next delivery" : "covers the next delivery", runway != null ? (risk ? "bad" : "good") : ""),
+    stat("Next delivery", onOrd ? `${onOrd.toLocaleString("en-US")} kits` : "None ordered", onOrd && due != null ? `in ${due.toFixed(1)} game days` : `reorder point ${L.rop != null ? L.rop.toLocaleString("en-US") : "set by the bot"}`),
+  ].join("");
+  $("kitSub").textContent = risk ? `At ${use.toLocaleString("en-US")} kits a day we run dry in ${runway.toFixed(1)} days, before the next order lands. The factory stops when that happens.` : "Running out of kits stops the whole factory. Runway is kits on hand divided by today's use.";
+  lineChart($("kitChart"), [{ pts: H.filter((h) => h.inv != null).map((h) => [h.day, h.inv]), color: css("--cobalt"), label: "On hand" }],
+    { h: 260, W: 1200, aria: "Kits on hand", hlines: L.rop ? [{ y: L.rop, label: "Reorder", color: css("--s3") }] : [], empty: "Kit history starts with the new bot runs." });
+  legend($("kitLegend"), [[css("--cobalt"), "Kits on hand"], [css("--s3"), "Reorder point", true]]);
 
   // actions
   const A = (D.actions || []).slice().reverse();
@@ -371,16 +573,26 @@ function alertUser(title, body) {
 }
 function diff(D) {
   const H = D.history || [], L = H[H.length - 1]; if (!L) return;
-  let prev = null; try { prev = JSON.parse(localStorage.getItem("lf-last") || "null"); } catch (e) {}
-  const now = { n: (D.actions || []).length, rank: L.rank, debt: Math.round(L.debt), m: (L.m || []).join("/") , t: D.updated };
-  if (prev && prev.t !== now.t) {
-    const newActs = (D.actions || []).slice(prev.n);
-    if (newActs.length) alertUser(`Bot made ${newActs.length} change${newActs.length > 1 ? "s" : ""}`, newActs.map((a) => a.act).join("; ").slice(0, 180));
-    if (prev.rank && now.rank && prev.rank !== now.rank) alertUser("Standing changed", `Rank ${prev.rank} to ${now.rank} of ${L.teams}`);
-    if (prev.debt !== now.debt) alertUser("Debt changed", `${fmtK(prev.debt)} to ${fmtK(now.debt)}`);
-    if (prev.m && prev.m !== now.m) alertUser("Machines changed", `${prev.m} to ${now.m} (stuffers/testers/tuners)`);
+  const prev = store.get("lf-last");
+  const use = kitUse(L), runway = use && L.inv != null ? L.inv / use : null;
+  const kitRisk = runway != null && (((L.kits_on_order || 0) > 0 && L.kits_due_in != null && runway < L.kits_due_in) || (!L.kits_on_order && runway < 4.5));
+  const ago = D.updated ? (Date.now() - Date.parse(D.updated)) / 60000 : 0;
+  const now = { n: (D.actions || []).length, rank: L.rank, debt: Math.round(L.debt), m: (L.m || []).join("/"), t: D.updated,
+    stale: ago > STALE_MIN && (L.day || 0) < GAME_END, kitRisk };
+  if (prev) {
+    if (prev.t !== now.t) {
+      const newActs = (D.actions || []).slice(prev.n);
+      const fails = newActs.filter((a) => !a.ok), oks = newActs.filter((a) => a.ok);
+      if (oks.length) alertUser(`Bot made ${oks.length} change${oks.length > 1 ? "s" : ""}`, oks.map((a) => a.act).join("; ").slice(0, 180));
+      if (fails.length) alertUser("Bot change failed", fails.map((a) => a.act).join("; ").slice(0, 180));
+      if (prev.rank && now.rank && prev.rank !== now.rank) alertUser("Standing changed", `Rank ${prev.rank} to ${now.rank} of ${L.teams}`);
+      if (prev.debt !== now.debt) alertUser("Debt changed", `${fmtK(prev.debt)} to ${fmtK(now.debt)}`);
+      if (prev.m && prev.m !== now.m) alertUser("Machines changed", `${prev.m} to ${now.m} (stuffers/testers/tuners)`);
+    }
+    if (now.stale && !prev.stale) alertUser("Bot has stopped", `No run for ${Math.round(ago)} minutes. Check the Actions tab.`);
+    if (now.kitRisk && !prev.kitRisk) alertUser("Kits running low", `${runway.toFixed(1)} days of kits left, next delivery ${L.kits_due_in != null ? "in " + L.kits_due_in.toFixed(1) + " days" : "not ordered"}`);
   }
-  try { localStorage.setItem("lf-last", JSON.stringify(now)); } catch (e) {}
+  store.set("lf-last", now);
 }
 function updateNotifyBtn() {
   const b = $("notifyBtn");
@@ -391,7 +603,7 @@ function updateNotifyBtn() {
 $("notifyBtn").onclick = async () => {
   if (!("Notification" in window)) return;
   const p = await Notification.requestPermission(); updateNotifyBtn();
-  if (p === "granted") alertUser("Alerts on", "You'll get a desktop alert when the bot changes something, or our rank, debt or machines move.");
+  if (p === "granted") alertUser("Alerts on", "You'll get an alert when the bot changes something, fails, or stops, and when our rank, debt, machines or kit runway move.");
 };
 updateNotifyBtn();
 
