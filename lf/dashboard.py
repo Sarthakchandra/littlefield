@@ -121,12 +121,14 @@ def update(path: Path, log_path: Path, team: str, snap, kp: dict, rank: dict | N
         data.update(backfill(log_path))   # this run's lines aren't in the log yet
     row = dict(t=kp.get("t"), day=round(snap.day, 2), cash=snap.cash, debt=snap.debt,
                m=[snap.machines[k] for k in (1, 2, 3)], on_order=[snap.on_order.get(k, 0) for k in (1, 2, 3)],
-               contract=snap.contract, wip=snap.wip_limit, inv=snap.inventory,
+               contract=snap.contract, wip=snap.wip_limit, inv=snap.inventory, rop=snap.rop, roq=snap.roq,
                **{k: v for k, v in kp.items() if k != "t"})
     if rank and rank.get("rank"):
         row.update(rank=rank["rank"], teams=rank["teams"], leader=rank["leader"], our_score=rank.get("cash"))
     table = [dict(r) for r in rank["table"]] if rank and rank.get("table") else None
     apply_actions(row, done_lines, table, team)
+    if row.get("model_gain") is not None:
+        row["proj300"] = round(row["cash"] - row["debt"] + row["model_gain"])
     if table:
         rank = dict(rank, table=table)
         row["leader"] = table[0]["cash"]

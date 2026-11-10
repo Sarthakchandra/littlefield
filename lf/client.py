@@ -68,6 +68,13 @@ class Snapshot:
     controls: dict = field(default_factory=dict)   # key -> Control
     loan_url: str | None = None
     series: dict = field(default_factory=dict)
+    kits_due_in: float | None = None
+    cash_detail: dict = field(default_factory=dict)
+
+
+CASH_LINES = {"revenue": r"revenue", "cash_interest": r"(?<!debt )interest", "machines": r"machine purchases",
+              "debt_interest": r"debt interest", "loan_fee": r"loan fee", "kits": r"materials purchases",
+              "holding": r"raw materials holding", "sales": r"machine sales"}
 
 
 def _num(s: str) -> float:
@@ -181,8 +188,13 @@ def parse_cash(h: str):
     elif "LoanForm" in h:
         loan_url = "LoanForm"   # live game: window.open('LoanForm') with amount + submit=increase/decrease
     onhand = re.search(r"Cash on Hand\s*(-?[\d,]+(?:\.\d+)?)", t)
+    detail = {}
+    for key, pat in CASH_LINES.items():
+        m = re.search(pat + r"\s+(-?[\d,]+(?:\.\d+)?)", t, re.I)
+        if m:
+            detail[key] = _num(m.group(1))
     return dict(debt=_num(debt.group(1)) if debt else 0.0, loan_url=loan_url,
-                cash_on_hand=_num(onhand.group(1)) if onhand else None)
+                cash_on_hand=_num(onhand.group(1)) if onhand else None, detail=detail)
 
 
 def parse_forms(h: str):
@@ -293,7 +305,8 @@ class LittlefieldClient:
             rule=rule, contract=o["contract"], lots_per_job=o["lots_per_job"], wip_limit=o["wip_limit"],
             inventory=m["inventory"], rop=m["rop"], roq=m["roq"], kit_unit=m["kit_unit"],
             kit_order_cost=m["kit_order_cost"], kits_on_order=m["kits_on_order"],
-            controls=controls, loan_url=cs["loan_url"])
+            controls=controls, loan_url=cs["loan_url"], kits_due_in=m.get("kits_due_in"),
+            cash_detail=cs.get("detail", {}))
         if with_plots:
             for name in PLOTS:
                 for lab, pts in parse_plot(self.get(f"Plot?data={name}&x=all")).items():
