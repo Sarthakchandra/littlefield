@@ -25,6 +25,9 @@ policy:
   c2_revert_lt: 1.5        # c2 pays $750 at 1.5 days: below that c1 is better
   c3_mode: true           # split each order into 3 lots of 20 and run contract 3 ($1,500, 6h quote)
   target_lots: 3          # flow ~5.2h at lot 20; lot 12 needs too much capital
+  c3_wip_days: 0.22       # safe WIP cap: capacity x 0.22 day (cap 12 on day 100)
+  c3_wip_days_probe: 0.25 # day 100 test: every cap raise filled at once, so demand > 41/day
+  c3_min_rev: 1320        # drop back to safe for 3 days if price/job (2-day avg) falls below this
   max_machines: 40
   no_edit_mode: hold      # if contract/WIP never become editable: stop buying kits, keep cash
   hold_after_day: 55

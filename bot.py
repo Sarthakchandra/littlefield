@@ -25,7 +25,7 @@ import yaml
 
 from lf.client import LittlefieldClient, GameError
 from lf import notify, dashboard
-from lf.policy import Observation, decide, PRICES
+from lf.policy import Observation, decide, PRICES, DEFAULTS, Forecaster, hours_per_job, GAME_END
 
 ROOT = Path(__file__).parent
 STATE = ROOT / "state" / "state.json"
@@ -102,7 +102,81 @@ def kpi_dict(snap) -> dict:
     u = [last(f"S{k}UTIL") for k in (1, 2, 3)]
     if all(x is not None for x in u):
         d["util"] = [round(x, 3) for x in u]
+    d["q"] = [round((last(f"S{k}Q") or 0) / 60, 1) for k in (1, 2, 3)]
+    d["kits_on_order"] = snap.kits_on_order
+    d["kits_due_in"] = snap.kits_due_in
+    if snap.cash_detail:
+        d["cs"] = snap.cash_detail
     return d
+
+
+def model_kpis(obs, snap, cfg, acts_rec, rev_now=None) -> dict:
+    """Plain capacity model for the dashboard: demand now, capacity per station, and
+    the cash we add between now and day 300 if we buy nothing more."""
+    pol = {**DEFAULTS, **(cfg.get("policy") or {})}
+    f = Forecaster(obs, pol)
+    lots = obs.lots_per_job
+    hp = {k: hours_per_job(k, lots) for k in (1, 2, 3)}
+    eff = {k: obs.machines[k] + obs.on_order.get(k, 0) for k in (1, 2, 3)}
+    debt = obs.debt
+    for a in acts_rec:
+        if not a.get("ok"):
+            continue
+        m = re.match(r"buy S(\d) -> (\d+)", a["act"])
+        if m:
+            k = int(m.group(1))
+            eff[k] += max(0, int(m.group(2)) - obs.machines[k])
+        m = re.match(r"(loan|repay) -> (\d+)", a["act"])
+        if m:
+            debt += int(m.group(2)) * (1 if m.group(1) == "loan" else -1)
+    u = 0.9
+    cap_now = [round(obs.machines[k] * 24 * u / hp[k], 1) for k in (1, 2, 3)]
+    cap_eff = [round(eff[k] * 24 * u / hp[k], 1) for k in (1, 2, 3)]
+    rev = rev_now if (rev_now and obs.contract == 3) else {1: 750, 2: 1000, 3: 1500}[obs.contract]
+    margin = rev - 60 * obs.kit_unit
+    day = obs.day
+    fut, t = 0.0, day
+    while t < GAME_END - 0.7:          # orders stop around 299.3
+        cap = min(cap_eff) if t >= day + 3 else min(cap_now)
+        fut += min(f.rate(t), cap) * margin * 0.5 - debt * 0.20 / 365 * 0.5
+        t += 0.5
+    resale = sum((eff[k] - 1) * PRICES[k][1] for k in (1, 2, 3))
+    return dict(demand=round(f.rate(day), 1), cap=cap_now, cap_eff=cap_eff,
+                int_day=round(debt * 0.20 / 365), model_gain=round(fut + resale), margin=round(margin))
+
+
+def strategy(snap, cfg, st) -> tuple[dict, dict, list]:
+    """Live tweaks on top of config.yaml.
+    WIP probe: run the contract-3 WIP cap a bit looser (more orders accepted). If the
+    average price per job over the last two days falls below the floor, drop back to
+    the safe setting for 3 game days, then try again.
+    Loan lock: once the bot has started repaying, it never borrows again (each new loan
+    costs a 5% fee)."""
+    pol = dict(cfg.get("policy") or {}) | {"allow_loans": cfg.get("allow_loans", False)}
+    mode, notes = {}, []
+    probe = pol.get("c3_wip_days_probe")
+    if probe and snap.contract == 3:
+        ser = snap.series.get("JOBREV_c3") or {}
+        revs = [ser[d] for d in sorted(ser)[-2:] if ser[d] > 0]
+        avg = sum(revs) / len(revs) if revs else None
+        floor = pol.get("c3_min_rev", 1320)
+        if st.get("wip_probe_off_until", 0) > snap.day:
+            mode["wip_mode"] = "safe"
+        elif (avg is not None and avg < floor and st.get("wip_probe_since") is not None
+              and snap.day - st["wip_probe_since"] >= 1.0):
+            st["wip_probe_off_until"] = snap.day + 3
+            st.pop("wip_probe_since", None)
+            mode["wip_mode"] = "safe"
+            notes.append(f"  wip probe off for 3 days: price/job ${avg:,.0f} < ${floor:,.0f}")
+        else:
+            pol["c3_wip_days"] = probe
+            st.setdefault("wip_probe_since", snap.day)
+            mode["wip_mode"] = "probe"
+        mode["rev2d"] = round(avg) if avg else None
+    if st.get("repaid"):
+        pol["allow_loans"] = False
+    mode["loans_locked"] = bool(st.get("repaid"))
+    return pol, mode, notes
 
 
 def kpis(snap) -> str:
@@ -207,11 +281,12 @@ def main(client=None, now=None) -> int:
                     if rank and rank.get("rank") else "rank n/a")
         head += f" | {rank_txt}"
         lines.append(head)
-        done, acts_rec = [], []
+        done, acts_rec, mode = [], [], {}
         if snap.day >= cfg.get("stop_after_day", 299.5):
             lines.append("  game over or about to end: no actions")
         else:
-            pol = cfg.get("policy", {}) | {"allow_loans": cfg.get("allow_loans", False)}
+            pol, mode, notes = strategy(snap, cfg, st)
+            lines.extend(notes)
             if pol.get("c3_mode") and "lots" not in snap.controls:
                 pol["c3_mode"] = False   # can't split lots: contract 3 can't hit its 6h quote
                 lines.append("  c3 mode off: no lot-size control on the page")
@@ -227,6 +302,8 @@ def main(client=None, now=None) -> int:
                     acts_rec.append(dict(t=ts, day=round(snap.day, 2), ok=True, act=str(a).split("  (")[0],
                                          why=a.reason, res=str(res).replace("Processing request...", "").strip()[-160:]))
                     st["actions"].append({"ts": ts, "day": snap.day, "act": str(a)})
+                    if a.kind == "repay":
+                        st["repaid"] = True
                 except GameError as e:
                     lines.append(f"  FAIL {a} | {e}")
                     acts_rec.append(dict(t=ts, day=round(snap.day, 2), ok=False, act=str(a).split("  (")[0],
@@ -237,8 +314,13 @@ def main(client=None, now=None) -> int:
         st["last_day"] = snap.day
         st["last"] = head
         try:
+            kp = dict(kpi_dict(snap), t=ts, **mode)
+            try:
+                kp.update(model_kpis(obs, snap, cfg, acts_rec, kp.get("rev")))
+            except Exception as e:  # noqa: BLE001
+                lines.append(f"  dashboard model failed: {e}")
             dashboard.update(STATE.parent / "dashboard.json", LOG, snap.team or cfg.get("team", ""),
-                             snap, dict(kpi_dict(snap), t=ts), rank, acts_rec)
+                             snap, kp, rank, acts_rec)
         except Exception as e:  # noqa: BLE001
             lines.append(f"  dashboard data failed: {e}")
         major = [x for x in done if not x.startswith(("rop", "roq"))]
