@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Littlefield 8a: factory dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ground: #F1F2F4; --ink: #0D1117; --mute: #5B6475;
+  --field: #FFFFFF; --field-2: #E3E4E6; --field-3: #D3D5D9;
+  --cobalt: #2440F0; --cobalt-soft: #DCE1FD; --cobalt-ink: #1A2FB8;
+  --gain: #0B7A4B; --loss: #B3261E;
+  --s1: #2440F0; --s2: #0D1117; --s3: #8A93A3;
+  --grid: #D3D5D9;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0D1117; --ink: #E8EAEE; --mute: #9AA3B2;
+    --field: #161B22; --field-2: #1F2630; --field-3: #2A323D;
+    --cobalt: #6F82F5; --cobalt-soft: #1B2350; --cobalt-ink: #A8B3F8;
+    --gain: #3DBE85; --loss: #F2766E;
+    --s1: #6F82F5; --s2: #E8EAEE; --s3: #7C8697; --grid: #2A323D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0D1117; --ink: #E8EAEE; --mute: #9AA3B2;
+  --field: #161B22; --field-2: #1F2630; --field-3: #2A323D;
+  --cobalt: #6F82F5; --cobalt-soft: #1B2350; --cobalt-ink: #A8B3F8;
+  --gain: #3DBE85; --loss: #F2766E;
+  --s1: #6F82F5; --s2: #E8EAEE; --s3: #7C8697; --grid: #2A323D;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; border-radius: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--ground); color: var(--ink);
+  font: 400 16px/1.45 "Schibsted Grotesk", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+::selection { background: var(--cobalt); color: #fff; }
+:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 2px; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px 96px; }
+@media (min-width: 900px) { .wrap { padding: 0 40px 96px; } }
+
+header.top { display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline; justify-content: space-between; padding: 24px 0 16px; }
+.brand { font-weight: 700; font-size: 18px; }
+.meta { color: var(--mute); font-size: 14px; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); background: var(--field-2);
+  border: 0; padding: 8px 16px; cursor: pointer; transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+button:hover { background: var(--field-3); }
+button:active { transform: scale(0.97); }
+button.primary { background: var(--cobalt); color: #fff; }
+button.primary:hover { background: var(--cobalt-ink); }
+
+.hero { display: grid; gap: 24px; padding: 24px 0 40px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .hero { grid-template-columns: 1.4fr 1fr; align-items: end; } }
+.big { font-weight: 800; font-size: clamp(52px, 11vw, 120px); letter-spacing: -0.04em; line-height: 0.95; margin-left: -0.04em; }
+.big.neg { color: var(--loss); }
+.lead { font-size: 20px; color: var(--mute); margin-top: 8px; max-width: 60ch; }
+.rankbox { background: var(--cobalt); color: #fff; padding: 24px; }
+.rankbox .r { font-weight: 800; font-size: clamp(52px, 8vw, 96px); letter-spacing: -0.04em; line-height: 0.95; }
+.rankbox .s { font-size: 16px; margin-top: 8px; opacity: 0.9; }
+
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; background: var(--ground); }
+@media (min-width: 700px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1100px) { .stats { grid-template-columns: repeat(6, 1fr); } }
+.stat { background: var(--field); padding: 16px; }
+.stat .k { font-size: 14px; color: var(--mute); }
+.stat .v { font-size: 28px; font-weight: 700; margin-top: 4px; letter-spacing: -0.02em; }
+.stat .d { font-size: 14px; color: var(--mute); margin-top: 2px; }
+
+section { padding-top: 64px; }
+h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+.sub { color: var(--mute); margin: 8px 0 24px; max-width: 70ch; }
+.panel { background: var(--field); padding: 16px; }
+@media (min-width: 900px) { .panel { padding: 24px; } }
+.two { display: grid; gap: 2px; grid-template-columns: 1fr; }
+@media (min-width: 1000px) { .two { grid-template-columns: 1.5fr 1fr; } }
+
+svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg.chart text { fill: var(--mute); font: 12px "Schibsted Grotesk", sans-serif; font-variant-numeric: tabular-nums; }
+svg.chart .lbl { font-weight: 700; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; color: var(--mute); margin-top: 8px; }
+.legend i { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 6px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-weight: 700; color: var(--mute); padding: 8px; background: var(--field-2); }
+td { padding: 8px; vertical-align: top; }
+tr:nth-child(even) td { background: var(--ground); }
+td.num, th.num { text-align: right; }
+tr.us td { background: var(--cobalt-soft) !important; font-weight: 700; }
+.ok { color: var(--gain); font-weight: 700; }
+.fail { color: var(--loss); font-weight: 700; }
+.why { color: var(--mute); }
+.scroll { max-height: 520px; overflow: auto; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
+
+.machines { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-bottom: 2px; }
+.mach { background: var(--field); padding: 16px; }
+.mach .n { font-weight: 800; font-size: 48px; letter-spacing: -0.03em; line-height: 1; }
+.mach .k { font-size: 14px; color: var(--mute); }
+.bar { height: 8px; background: var(--field-2); margin-top: 12px; }
+.bar > span { display: block; height: 100%; background: var(--cobalt); transform-origin: left; }
+.bar.hot > span { background: var(--loss); }
+
+#toast { position: fixed; left: 16px; bottom: 16px; max-width: 420px; background: var(--ink); color: var(--ground);
+  padding: 16px; font-size: 14px; transform: translateY(8px); opacity: 0; pointer-events: none;
+  transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1), transform 200ms cubic-bezier(0.23, 1, 0.32, 1); }
+#toast.on { opacity: 1; transform: none; }
+.empty { color: var(--mute); padding: 24px 0; }
+footer { color: var(--mute); font-size: 14px; padding-top: 64px; }
+a { color: var(--cobalt); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="brand">Littlefield, team <span id="team">8a</span></div>
+      <div class="meta" id="meta">Loading the latest bot run…</div>
+    </div>
+    <div class="controls">
+      <button class="primary" id="notifyBtn" type="button">Turn on desktop alerts</button>
+      <button id="refreshBtn" type="button">Refresh</button>
+      <button id="themeBtn" type="button">Dark</button>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div>
+      <div class="big" id="net">$0</div>
+      <p class="lead" id="netLead">Cash minus debt.</p>
+    </div>
+    <div class="rankbox">
+      <div class="r" id="rank">–</div>
+      <div class="s" id="rankSub">Overall standing</div>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <section>
+    <h2>Where we stand</h2>
+    <p class="sub" id="standSub">Overall standing from the game, read every bot run.</p>
+    <div class="two">
+      <div class="panel"><div id="rankChart"></div></div>
+      <div class="panel scroll"><table id="standTable"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Day 300 projection against the field</h2>
+    <p class="sub" id="projSub">Each team's leaderboard value, projected to day 300 from its trend over the last 10 game days.</p>
+    <div class="two">
+      <div class="panel"><div id="projChart"></div><div class="legend" id="projLegend"></div></div>
+      <div class="panel scroll"><table id="projTable"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Cash and debt</h2>
+    <p class="sub">Cash on hand and debt after every bot run. The gap is what the leaderboard counts.</p>
+    <div class="panel"><div id="cashChart"></div><div class="legend" id="cashLegend"></div></div>
+  </section>
+
+  <section>
+    <h2>Machines per stage</h2>
+    <p class="sub">Installed machines, machines in transit, and yesterday's utilisation. Red bars are above 92%.</p>
+    <div class="machines" id="machines"></div>
+    <div class="panel"><div id="machChart"></div><div class="legend" id="machLegend"></div></div>
+  </section>
+
+  <section>
+    <h2>Throughput and price</h2>
+    <p class="sub">Jobs finished and accepted per day, lead time in hours, and revenue per job.</p>
+    <div class="two">
+      <div class="panel"><div id="flowChart"></div><div class="legend" id="flowLegend"></div></div>
+      <div class="panel"><div id="ltChart"></div><div class="legend" id="ltLegend"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Transaction history</h2>
+    <p class="sub">Every change the bot made in the game, with its reason and the game's reply.</p>
+    <div class="filters" id="filters"></div>
+    <div class="panel scroll"><table id="actTable"></table></div>
+  </section>
+
+  <footer>
+    Data: <a id="srcLink" href="#" target="_blank" rel="noopener">state/dashboard.json</a> in the bot repo, refreshed every minute.
+    Desktop alerts work while this tab is open. Email alerts come from the repo's issue #1.
+  </footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const REPO = "Sarthakchandra/littlefield";
+const SRC = `https://raw.githubusercontent.com/${REPO}/main/state/dashboard.json`;
+const GAME_END = 300;
+const $ = (id) => document.getElementById(id);
+const fmt$ = (v) => (v < 0 ? "−$" : "$") + Math.abs(Math.round(v)).toLocaleString("en-US");
+const fmtK = (v) => { const a = Math.abs(v), s = v < 0 ? "−" : ""; return a >= 1e6 ? `${s}$${(a/1e6).toFixed(2)}M` : a >= 1e3 ? `${s}$${Math.round(a/1e3)}k` : `${s}$${Math.round(a)}`; };
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let DATA = null, FILTER = "all";
+
+// ---------- theme ----------
+function applyTheme(t) {
+  if (t) document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme");
+  const dark = t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  $("themeBtn").textContent = dark ? "Light" : "Dark";
+  if (DATA) render(DATA);
+}
+let theme = null; try { theme = localStorage.getItem("lf-theme"); } catch (e) {}
+applyTheme(theme);
+$("themeBtn").onclick = () => {
+  const dark = document.documentElement.getAttribute("data-theme") === "dark" ||
+    (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+  const next = dark ? "light" : "dark";
+  try { localStorage.setItem("lf-theme", next); } catch (e) {}
+  applyTheme(next);
+};
+
+// ---------- tiny SVG line chart ----------
+function lineChart(el, series, opts = {}) {
+  const W = 760, H = opts.h || 260, P = { l: 64, r: 96, t: 12, b: 28 };
+  const pts = series.flatMap((s) => s.pts);
+  if (pts.length < (opts.minPts || 1) || (opts.minPts && new Set(pts.map((p) => p[0])).size < 2)) { el.innerHTML = `<p class="empty">${opts.empty || "No data yet."}</p>`; return; }
+  let x0 = Math.min(...pts.map((p) => p[0])), x1 = Math.max(...pts.map((p) => p[0]), opts.xMax || -Infinity);
+  let y0 = Math.min(...pts.map((p) => p[1]), opts.yMin ?? Infinity), y1 = Math.max(...pts.map((p) => p[1]));
+  if (opts.zero !== false) { y0 = Math.min(y0, 0); }
+  if (x1 === x0) x1 = x0 + 1; if (y1 === y0) y1 = y0 + 1;
+  const pad = (y1 - y0) * 0.06; y1 += pad; if (y0 < 0 || opts.zero === false) y0 -= pad;
+  const X = (x) => P.l + ((x - x0) / (x1 - x0)) * (W - P.l - P.r);
+  const Y = opts.invert ? (y) => P.t + ((y - y0) / (y1 - y0)) * (H - P.t - P.b) : (y) => H - P.b - ((y - y0) / (y1 - y0)) * (H - P.t - P.b);
+  const ticks = (a, b, n) => { const st = Math.pow(10, Math.floor(Math.log10((b - a) / n || 1))); const m = [1, 2, 5, 10].find((k) => (b - a) / (st * k) <= n) * st; const out = []; for (let v = Math.ceil(a / m) * m; v <= b; v += m) out.push(v); return out; };
+  const yf = opts.yFmt || ((v) => v.toLocaleString("en-US"));
+  let g = "";
+  for (const v of ticks(y0, y1, 5)) g += `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css("--grid")}" stroke-width="1"/><text x="${P.l - 8}" y="${Y(v) + 4}" text-anchor="end">${yf(v)}</text>`;
+  for (const v of ticks(x0, x1, 8)) g += `<text x="${X(v)}" y="${H - 8}" text-anchor="middle">${Math.round(v)}</text>`;
+  if (opts.vline) g += `<line x1="${X(opts.vline)}" x2="${X(opts.vline)}" y1="${P.t}" y2="${H - P.b}" stroke="${css("--mute")}" stroke-dasharray="3 4"/>`;
+  for (const s of series) {
+    if (!s.pts.length) continue;
+    const d = s.pts.map((p, i) => (i ? (s.step ? `H${X(p[0])}V${Y(p[1])}` : `L${X(p[0])},${Y(p[1])}`) : `M${X(p[0])},${Y(p[1])}`)).join("");
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.w || 2}" ${s.dash ? `stroke-dasharray="${s.dash}"` : ""} stroke-linejoin="round"/>`;
+    if (s.label) { const p = s.pts[s.pts.length - 1]; g += `<text class="lbl" x="${X(p[0]) + 6}" y="${Y(p[1]) + 4}" style="fill:${s.color}">${esc(s.label)}</text>`; }
+  }
+  el.innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.aria || "chart")}">${g}</svg>`;
+}
+function legend(el, items) { el.innerHTML = items.map(([c, t, dash]) => `<span><i style="background:${dash ? "transparent" : c};border-top:${dash ? `2px dashed ${c}` : "0"}"></i>${esc(t)}</span>`).join(""); }
+
+// ---------- projections ----------
+function fit(points, fromDay) {
+  const p = points.filter((q) => q[0] >= fromDay);
+  if (p.length < 3) return null;
+  const n = p.length, mx = p.reduce((a, q) => a + q[0], 0) / n, my = p.reduce((a, q) => a + q[1], 0) / n;
+  const sxx = p.reduce((a, q) => a + (q[0] - mx) ** 2, 0); if (!sxx) return null;
+  const b = p.reduce((a, q) => a + (q[0] - mx) * (q[1] - my), 0) / sxx;
+  return { a: my - b * mx, b };
+}
+
+// ---------- render ----------
+function render(D) {
+  DATA = D;
+  const H = D.history || [], L = H[H.length - 1] || {};
+  const team = D.team || "8a";
+  $("team").textContent = team;
+  const ago = D.updated ? Math.round((Date.now() - Date.parse(D.updated)) / 60000) : null;
+  $("meta").textContent = `Day ${L.day ?? "?"} of 300 · last bot run ${ago == null ? "unknown" : ago <= 1 ? "just now" : ago + " min ago"} · ${H.length} runs logged`;
+  const net = (L.cash || 0) - (L.debt || 0);
+  $("net").textContent = fmt$(net); $("net").classList.toggle("neg", net < 0);
+  const prev = H.find((h) => h.day >= (L.day || 0) - 1) || H[0] || {};
+  const dNet = net - ((prev.cash || 0) - (prev.debt || 0));
+  $("netLead").textContent = `Cash on hand minus debt. ${dNet >= 0 ? "Up" : "Down"} ${fmtK(Math.abs(dNet))} over the last game day.`;
+  if (L.rank) {
+    $("rank").textContent = `${L.rank} / ${L.teams}`;
+    const r0 = (H.slice().reverse().find((h) => h.rank && h.day <= (L.day || 0) - 1) || {}).rank;
+    $("rankSub").textContent = `Overall standing${r0 ? `, ${r0 > L.rank ? "up " + (r0 - L.rank) : r0 < L.rank ? "down " + (L.rank - r0) : "no change"} since a game day ago` : ""}. Leader ${fmtK(L.leader)}.`;
+  } else { $("rank").textContent = "–"; $("rankSub").textContent = "Standing not read yet"; }
+
+  const stats = [
+    ["Cash on hand", fmtK(L.cash || 0), ""],
+    ["Debt", fmtK(L.debt || 0), "20% a year"],
+    ["Contract", L.contract ? `C${L.contract}` : "–", L.lt_h != null ? `lead ${L.lt_h.toFixed(1)} h` : ""],
+    ["Revenue per job", L.rev != null ? fmt$(L.rev) : "–", L.contract === 3 ? "max $1,500" : ""],
+    ["Jobs done per day", L.done ?? "–", L.acc != null ? `${L.acc} accepted` : ""],
+    ["Kits on hand", L.inv != null ? L.inv.toLocaleString("en-US") : "–", `WIP cap ${L.wip ?? "–"}`],
+  ];
+  $("stats").innerHTML = stats.map(([k, v, d]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join("");
+
+  // standing
+  lineChart($("rankChart"), [{ pts: H.filter((h) => h.rank).map((h) => [h.day, h.rank]), color: css("--cobalt"), label: L.rank ? `#${L.rank}` : "", step: true }],
+    { invert: true, zero: false, yMin: 1, minPts: 2, aria: "Rank over time", yFmt: (v) => "#" + Math.round(v), empty: "The rank line fills in as more bot runs read the leaderboard." });
+  const S = D.standings || [];
+  const ourIdx = S.findIndex((r) => String(r.team).toLowerCase() === team.toLowerCase());
+  const show = S.map((r, i) => ({ ...r, i })).filter((r) => r.i < 10 || Math.abs(r.i - ourIdx) <= 2);
+  $("standTable").innerHTML = S.length ? `<tr><th class="num">#</th><th>Team</th><th class="num">Value</th></tr>` + show.map((r, k) =>
+    (k && r.i - show[k - 1].i > 1 ? `<tr><td></td><td class="why">…</td><td></td></tr>` : "") +
+    `<tr class="${r.i === ourIdx ? "us" : ""}"><td class="num">${r.i + 1}</td><td>${esc(r.team)}</td><td class="num">${fmt$(r.cash)}</td></tr>`).join("")
+    : `<tr><td class="empty">The full leaderboard appears after the next bot run.</td></tr>`;
+  $("standSub").textContent = S.length ? `${S.length} teams. Showing the top 10 and the teams around us.` : "Overall standing from the game, read every bot run.";
+
+  // projection
+  const SH = D.standings_hist || {};
+  const day = L.day || 0, from = day - 10;
+  const proj = Object.entries(SH).map(([t, pts]) => { const f = fit(pts, from); const lastV = pts[pts.length - 1]?.[1] ?? 0; return { t, pts, f, now: lastV, p300: f ? f.a + f.b * GAME_END : null }; })
+    .filter((r) => r.p300 != null).sort((a, b) => b.p300 - a.p300);
+  const usP = proj.find((r) => r.t.toLowerCase() === team.toLowerCase());
+  const top = proj.filter((r) => r !== usP).slice(0, 5);
+  const shades = [css("--s2"), css("--s3"), css("--s3"), css("--s3"), css("--s3")];
+  const ser = [];
+  top.forEach((r, i) => { ser.push({ pts: r.pts, color: shades[i], w: 1.5 }); ser.push({ pts: [[r.pts[r.pts.length - 1][0], r.now], [GAME_END, r.p300]], color: shades[i], w: 1.5, dash: "4 4", label: i < 2 ? r.t : "" }); });
+  if (usP) { ser.push({ pts: usP.pts, color: css("--cobalt"), w: 3 }); ser.push({ pts: [[usP.pts[usP.pts.length - 1][0], usP.now], [GAME_END, usP.p300]], color: css("--cobalt"), w: 3, dash: "6 4", label: team }); }
+  lineChart($("projChart"), ser, { xMax: GAME_END, aria: "Projected leaderboard value to day 300", yFmt: fmtK, empty: "Projections need about 3 game days of leaderboard history (roughly 1.5 hours after the first standing is read)." });
+  legend($("projLegend"), usP ? [[css("--cobalt"), "Us"], [css("--s2"), "Projected #1 rival"], [css("--s3"), "Next four"], [css("--mute"), "Projection", true]] : []);
+  const usRank = usP ? proj.indexOf(usP) + 1 : null;
+  $("projSub").textContent = usP ? `On current trends we finish #${usRank} of ${proj.length} with ${fmtK(usP.p300)}. Trend from the last 10 game days; it ignores machines we have yet to sell.` : "Each team's leaderboard value, projected to day 300 from its trend over the last 10 game days.";
+  $("projTable").innerHTML = proj.length ? `<tr><th class="num">#</th><th>Team</th><th class="num">Now</th><th class="num">Day 300</th></tr>` +
+    proj.slice(0, 12).concat(usP && usRank > 12 ? [usP] : []).map((r) => `<tr class="${r === usP ? "us" : ""}"><td class="num">${proj.indexOf(r) + 1}</td><td>${esc(r.t)}</td><td class="num">${fmtK(r.now)}</td><td class="num">${fmtK(r.p300)}</td></tr>`).join("")
+    : `<tr><td class="empty">No projection yet.</td></tr>`;
+
+  // cash
+  lineChart($("cashChart"), [
+    { pts: H.map((h) => [h.day, h.cash]), color: css("--cobalt"), label: "Cash" },
+    { pts: H.map((h) => [h.day, h.debt]), color: css("--loss"), label: "Debt", step: true },
+    { pts: H.map((h) => [h.day, h.cash - h.debt]), color: css("--s2"), label: "Net", w: 1.5 },
+  ], { aria: "Cash and debt by game day", yFmt: fmtK, h: 300 });
+  legend($("cashLegend"), [[css("--cobalt"), "Cash on hand"], [css("--loss"), "Debt"], [css("--s2"), "Net (cash minus debt)"]]);
+
+  // machines
+  const names = ["Stuffers", "Testers", "Tuners"], util = L.util || [];
+  $("machines").innerHTML = names.map((n, i) => { const u = util[i]; return `<div class="mach"><div class="n">${(L.m || [])[i] ?? "–"}</div><div class="k">${n}${(L.on_order || [])[i] ? ` · ${(L.on_order)[i]} on the way` : ""}</div><div class="bar ${u > 0.92 ? "hot" : ""}"><span style="transform:scaleX(${Math.min(1, u || 0)})"></span></div><div class="k" style="margin-top:4px">${u != null ? Math.round(u * 100) + "% busy yesterday" : "utilisation n/a"}</div></div>`; }).join("");
+  lineChart($("machChart"), [0, 1, 2].map((i) => ({ pts: H.map((h) => [h.day, (h.m || [])[i]]), color: [css("--s1"), css("--s2"), css("--s3")][i], step: true, label: names[i] })), { aria: "Machines per station", h: 220 });
+  legend($("machLegend"), [[css("--s1"), "Stuffers"], [css("--s2"), "Testers"], [css("--s3"), "Tuners"]]);
+
+  // flow
+  const HF = H.filter((h) => h.done != null);
+  lineChart($("flowChart"), [{ pts: HF.map((h) => [h.day, h.done]), color: css("--cobalt"), label: "Done" }, { pts: HF.filter((h) => h.acc != null).map((h) => [h.day, h.acc]), color: css("--s3"), label: "Accepted" }], { aria: "Jobs per day", h: 240 });
+  legend($("flowLegend"), [[css("--cobalt"), "Jobs done per day"], [css("--s3"), "Orders accepted per day"]]);
+  lineChart($("ltChart"), [{ pts: HF.filter((h) => h.rev != null && h.day >= 60).map((h) => [h.day, h.rev]), color: css("--cobalt"), label: "Rev" }], { aria: "Revenue per job", h: 240, yFmt: (v) => "$" + Math.round(v), zero: false });
+  legend($("ltLegend"), [[css("--cobalt"), "Revenue per job, day 60 on"]]);
+
+  // actions
+  const A = (D.actions || []).slice().reverse();
+  const kinds = { all: "All", buy: "Machines", loan: "Loans", contract: "Contract", wip: "WIP and lots", kit: "Kits", fail: "Failures" };
+  $("filters").innerHTML = Object.entries(kinds).map(([k, v]) => `<button type="button" aria-pressed="${FILTER === k}" data-k="${k}">${v}</button>`).join("");
+  $("filters").querySelectorAll("button").forEach((b) => (b.onclick = () => { FILTER = b.dataset.k; render(DATA); }));
+  const match = (a) => FILTER === "all" || (FILTER === "fail" ? !a.ok : FILTER === "kit" ? /^ro[pq]/.test(a.act) : FILTER === "wip" ? /^(wip|lots)/.test(a.act) : FILTER === "buy" ? /^(buy|sell)/.test(a.act) : FILTER === "loan" ? /^(loan|repay)/.test(a.act) : a.act.startsWith(FILTER));
+  const AF = A.filter(match);
+  $("actTable").innerHTML = AF.length ? `<tr><th class="num">Day</th><th>Change</th><th>Why</th><th>Game reply</th></tr>` + AF.slice(0, 300).map((a) =>
+    `<tr><td class="num">${a.day}</td><td class="${a.ok ? "" : "fail"}">${esc(a.act)}</td><td class="why">${esc(a.why)}</td><td class="why">${esc((a.res || "").replace(/^.*CONFIRMATION\s*/, ""))}</td></tr>`).join("")
+    : `<tr><td class="empty">No changes in this group yet.</td></tr>`;
+  $("srcLink").href = `https://github.com/${REPO}/blob/main/state/dashboard.json`;
+}
+
+// ---------- alerts ----------
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 6000); }
+function alertUser(title, body) {
+  toast(`${title}: ${body}`);
+  if ("Notification" in window && Notification.permission === "granted") { try { new Notification(title, { body, tag: title }); } catch (e) {} }
+}
+function diff(D) {
+  const H = D.history || [], L = H[H.length - 1]; if (!L) return;
+  let prev = null; try { prev = JSON.parse(localStorage.getItem("lf-last") || "null"); } catch (e) {}
+  const now = { n: (D.actions || []).length, rank: L.rank, debt: Math.round(L.debt), m: (L.m || []).join("/") , t: D.updated };
+  if (prev && prev.t !== now.t) {
+    const newActs = (D.actions || []).slice(prev.n);
+    if (newActs.length) alertUser(`Bot made ${newActs.length} change${newActs.length > 1 ? "s" : ""}`, newActs.map((a) => a.act).join("; ").slice(0, 180));
+    if (prev.rank && now.rank && prev.rank !== now.rank) alertUser("Standing changed", `Rank ${prev.rank} to ${now.rank} of ${L.teams}`);
+    if (prev.debt !== now.debt) alertUser("Debt changed", `${fmtK(prev.debt)} to ${fmtK(now.debt)}`);
+    if (prev.m && prev.m !== now.m) alertUser("Machines changed", `${prev.m} to ${now.m} (stuffers/testers/tuners)`);
+  }
+  try { localStorage.setItem("lf-last", JSON.stringify(now)); } catch (e) {}
+}
+function updateNotifyBtn() {
+  const b = $("notifyBtn");
+  if (!("Notification" in window)) { b.textContent = "Alerts not supported here"; b.disabled = true; return; }
+  if (Notification.permission === "granted") { b.textContent = "Desktop alerts on"; b.classList.remove("primary"); }
+  else if (Notification.permission === "denied") { b.textContent = "Alerts blocked in browser settings"; b.classList.remove("primary"); }
+}
+$("notifyBtn").onclick = async () => {
+  if (!("Notification" in window)) return;
+  const p = await Notification.requestPermission(); updateNotifyBtn();
+  if (p === "granted") alertUser("Alerts on", "You'll get a desktop alert when the bot changes something, or our rank, debt or machines move.");
+};
+updateNotifyBtn();
+
+// ---------- load ----------
+async function load() {
+  try {
+    const r = await fetch(`${SRC}?t=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    const D = await r.json(); render(D); diff(D);
+    document.title = D.history?.length ? `#${D.history[D.history.length - 1].rank ?? "?"} · Littlefield 8a` : "Littlefield 8a";
+  } catch (e) { $("meta").textContent = "Couldn't load the bot data. Retrying in a minute."; }
+}
+$("refreshBtn").onclick = load;
+load(); setInterval(load, 60000);
+</script>
+</body>
+</html>
