@@ -76,6 +76,7 @@ DEFAULTS = dict(
     final_sale_day=299.5,
     wave_only=True,
     day50_wave=None,           # e.g. {1: 4, 2: 5, 3: 2}: fixed first purchase instead of the rule
+    buy_while_pending=False,   # top up a station even if machines are still in transit
     c3_mode=False,             # split lots and run contract 3 (6h quote) after the flush
     target_lots=5,             # lots per job in c3 mode (5 x 12 kits: no-wait flow ~4.3h)
     c3_lt=0.27,                # switch to c3 when predicted lead time (days) is at or below this
@@ -109,8 +110,17 @@ class Forecaster:
             q = sum(s.get(f"S{k}Q", {}).get(d, 0.0) for k in (1, 2, 3)) / 60.0
             wip_est[d] = q + s.get("JOBQ", {}).get(d, 0.0)
         cap = obs.wip_limit
-        # a day is censored if the factory sat near its WIP cap (orders rejected)
-        self.clean = {d: v for d, v in jobin.items() if wip_est.get(d, 0) < 0.85 * cap and d >= 1}
+        out = s.get("JOBOUT", {})
+        # a day is censored if orders were turned away: the factory sat near its WIP cap,
+        # or (with a tight bot-set cap, where queues stay short) it accepted about as much
+        # as it could finish. Accepted orders on those days understate demand.
+        def censored(d, v):
+            if d < 50:   # before we took over the cap was the default 300
+                return wip_est.get(d, 0) >= 0.85 * 300
+            # From day 50 the bot sets the WIP cap and kit supply, so accepted orders
+            # measure our own limits (capacity, cap, kit stock-outs), never demand.
+            return True
+        self.clean = {d: v for d, v in jobin.items() if d >= 1 and not censored(d, v)}
         pts = [(d, v) for d, v in self.clean.items() if d <= 95]
         if len(pts) >= 8:
             n = len(pts)
@@ -270,7 +280,7 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
         alloc[k] += 1
         spend_left -= price
     for k in (1, 2, 3):
-        if alloc[k] and obs.on_order.get(k, 0) == 0:
+        if alloc[k] and (obs.on_order.get(k, 0) == 0 or cfg["buy_while_pending"]):
             buys.append(Action("buy", obs.machines[k] + alloc[k], station=k,
                                reason=f"want {want[k]} (λplan {lam_plan:.1f}/d, backlog {backlog_h[k]:.0f}h)"))
     acts += buys
@@ -284,7 +294,7 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
             acts.append(Action("loan", int(amt), reason=f"unfunded high-payback capacity ${unfunded:,.0f}"))
     elif obs.debt > 0 and unfunded == 0:
         free = obs.cash - (obs.roq * obs.kit_unit + obs.kit_order_cost) * 2 - cfg["cash_buffer"] * 3
-        if free > 20_000:
+        if free > 20_000 and obs.debt >= 1_000:
             acts.append(Action("repay", int(min(free, obs.debt)), reason="debt costs 20%, cash earns 10%"))
 
     # ---- end of game: stop accepting, then sell down once the plant is empty
