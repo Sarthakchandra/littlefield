@@ -1,5 +1,5 @@
 {
- "runs": 130,
+ "runs": 131,
  "actions": [
   {
    "ts": "2026-11-09T16:21:39+00:00",
@@ -275,9 +275,14 @@
    "ts": "2026-11-10T10:53:42+00:00",
    "day": 89.34,
    "act": "roq -> 10080  (EOQ 7733, cover 4.5d)"
+  },
+  {
+   "ts": "2026-11-10T11:12:18+00:00",
+   "day": 89.99,
+   "act": "roq -> 13200  (EOQ 7733, cover 4.5d)"
   }
  ],
- "last_day": 89.66,
- "last": "2026-11-10T11:02:55+00:00 day 89.7 cash $140,306 debt $1,800,000 machines {1: 16, 2: 7, 3: 10} on-order {1: 1, 2: 0, 3: 0} inv 12480 rop/roq 14040/10080 contract 3 wip 10 rule pri4 edits=on | done 39/d c3 lt 5.7h rev $1,397 queued 1 jobs accepted 37/d util 0.78/0.68/0.68 | rank 29/97 (leader $561,805)",
+ "last_day": 89.99,
+ "last": "2026-11-10T11:12:18+00:00 day 90.0 cash $156,974 debt $1,800,000 machines {1: 16, 2: 7, 3: 10} on-order {1: 1, 2: 0, 3: 0} inv 12480 rop/roq 14040/10080 contract 3 wip 10 rule pri4 edits=on | done 39/d c3 lt 5.7h rev $1,397 queued 1 jobs accepted 37/d util 0.78/0.68/0.68 | rank 29/97 (leader $561,805)",
  "notify_issue": 1
 }

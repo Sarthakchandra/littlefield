@@ -297,3 +297,6 @@ lf.client.GameError: login failed:  Littlefield Invalid team id or password! Ple
   notify: github issue #1, whatsapp: not set up
 2026-11-10T11:02:55+00:00 day 89.7 cash $140,306 debt $1,800,000 machines {1: 16, 2: 7, 3: 10} on-order {1: 1, 2: 0, 3: 0} inv 12480 rop/roq 14040/10080 contract 3 wip 10 rule pri4 edits=on | done 39/d c3 lt 5.7h rev $1,397 queued 1 jobs accepted 37/d util 0.78/0.68/0.68 | rank 29/97 (leader $561,805)
   no changes needed
+2026-11-10T11:12:18+00:00 day 90.0 cash $156,974 debt $1,800,000 machines {1: 16, 2: 7, 3: 10} on-order {1: 1, 2: 0, 3: 0} inv 12480 rop/roq 14040/10080 contract 3 wip 10 rule pri4 edits=on | done 39/d c3 lt 5.7h rev $1,397 queued 1 jobs accepted 37/d util 0.78/0.68/0.68 | rank 29/97 (leader $561,805)
+  OK   roq -> 13200  (EOQ 7733, cover 4.5d) |  Materials Form Littlefield Technologies - CONFIRMATION Processing request... Processing request... Material order quantity is now 220 x 60 = 13200 units 
+  notify: github issue #1, whatsapp: not set up
