@@ -470,18 +470,22 @@ function render(D) {
 
   // forecast
   const SH = D.standings_hist || {}, day = L.day || 0;
-  const trend = Object.entries(SH).map(([t, pts]) => { const f = fit(pts, day - 10); return { t, pts, now: pts[pts.length - 1]?.[1] ?? 0, p300: f ? f.a + f.b * GAME_END : null }; })
+  // carry each team's recent earning rate forward, scaled by the demand shape (flat to day 180,
+  // 60% to day 240, then down to zero), so nobody gets credit for demand that won't exist
+  const shape = (t) => (t <= 180 ? 1 : t <= 240 ? 0.6 : 0.6 * Math.max(0, GAME_END - t) / 60);
+  let effDays = 0; for (let t = day; t < GAME_END; t += 0.5) effDays += shape(t) * 0.5; effDays /= Math.max(shape(day), 0.01);
+  const trend = Object.entries(SH).map(([t, pts]) => { const f = fit(pts, day - 6); const now = pts[pts.length - 1]?.[1] ?? 0; return { t, pts, now, rate: f ? f.b : null, p300: f ? now + f.b * effDays : null }; })
     .filter((r) => r.p300 != null).sort((a, b) => b.p300 - a.p300);
   const usT = trend.find((r) => r.t.toLowerCase() === team.toLowerCase());
   const rivals = trend.filter((r) => r !== usT);
   const modelRank = L.proj300 != null && rivals.length ? rivals.filter((r) => r.p300 > L.proj300).length + 1 : null;
   $("projStats").innerHTML = [
     stat("Our model", L.proj300 != null ? fmtK(L.proj300) : "–", "capacity we own or have ordered, demand curve, interest"),
-    stat("Straight-line trend", usT ? fmtK(usT.p300) : "–", "last 10 game days, carried forward"),
+    stat("Our trend", usT ? fmtK(usT.p300) : "–", usT ? `${fmtK(usT.rate)} a day lately, machine buying included` : "needs leaderboard history"),
     stat("Rank on our model", modelRank ? `#${modelRank}` : "–", rivals.length ? `against ${rivals.length} rivals' trends` : "needs leaderboard history"),
-    stat("Projected leader", rivals[0] ? fmtK(rivals[0].p300) : "–", rivals[0] ? esc(rivals[0].t) : ""),
+    stat("Projected leader", rivals[0] ? fmtK(rivals[0].p300) : "–", rivals[0] ? `${esc(rivals[0].t)}, earning ${fmtK(rivals[0].rate)} a day` : ""),
   ].join("");
-  $("projSub").textContent = "The straight line punishes teams that borrowed to build capacity, which includes us. The model counts the cash our machines will earn from here, so it is the fairer number for us. Rivals only have the straight line, since we can't see their factories.";
+  $("projSub").textContent = `Each team's earning rate over the last 6 game days, carried to day 300 and scaled down after day 180 the way demand falls: ${Math.round(effDays)} full-demand days left. A team that bought machines lately looks worse than it is, which includes us, so our own line uses the capacity model instead.`;
   const ser = [];
   const shades = [css("--s2"), css("--s3"), css("--s3"), css("--s3"), css("--s3")];
   rivals.slice(0, 5).forEach((r, i) => { ser.push({ pts: r.pts, color: shades[i], w: 1.5 }); ser.push({ pts: [[r.pts[r.pts.length - 1][0], r.now], [GAME_END, r.p300]], color: shades[i], w: 1.5, dash: "4 4", label: i < 2 ? r.t : "" }); });
@@ -492,7 +496,7 @@ function render(D) {
     if (usT) ser.push({ pts: [[day, net], [GAME_END, usT.p300]], color: css("--loss"), w: 1.5, dash: "3 4", label: "Trend" });
   }
   lineChart($("projChart"), ser, { xMax: GAME_END, aria: "Day 300 forecast", yFmt: fmtK, empty: "Waiting for data." });
-  legend($("projLegend"), [[css("--cobalt"), "Us, and our model", ], [css("--loss"), "Our straight-line trend", true], [css("--s2"), "Projected #1 rival"], [css("--s3"), "Next four rivals"]]);
+  legend($("projLegend"), [[css("--cobalt"), "Us, and our model", ], [css("--loss"), "Our trend", true], [css("--s2"), "Projected #1 rival"], [css("--s3"), "Next four rivals"]]);
   const rows = rivals.slice(0, 10).map((r) => ({ t: r.t, now: r.now, p: r.p300 }));
   if (L.proj300 != null) rows.push({ t: team + " (model)", now: net, p: L.proj300, us: true });
   rows.sort((a, b) => b.p - a.p);
