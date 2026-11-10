@@ -28,6 +28,8 @@ policy:
   c3_wip_days: 0.22       # safe WIP cap: capacity x 0.22 day (cap 12 on day 100)
   c3_wip_days_probe: 0.25 # day 100 test: every cap raise filled at once, so demand > 41/day
   c3_min_rev: 1320        # drop back to safe for 3 days if price/job (2-day avg) falls below this
+  buy_min_util: 0.80      # day 108: no new machine at a station under 80% busy (2-day avg); S1 sat at 70%
+  buy_gate_from_day: 105  # gate off during the ramp-up: machines must land before demand does
   max_machines: 40
   no_edit_mode: hold      # if contract/WIP never become editable: stop buying kits, keep cash
   hold_after_day: 55

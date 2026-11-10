@@ -179,6 +179,34 @@ def strategy(snap, cfg, st) -> tuple[dict, dict, list]:
     return pol, mode, notes
 
 
+def gate_buys(acts, snap, cfg) -> tuple[list, list]:
+    """Only buy at a station that is actually busy. The policy sizes capacity to forecast
+    demand, but the WIP cap (which protects the 6h quote) accepts fewer jobs than that,
+    so a station can look short on paper while sitting idle. Below `buy_min_util`
+    (2-day average) a new machine adds no output. Loans tied to blocked buys go too."""
+    pol = cfg.get("policy") or {}
+    floor = pol.get("buy_min_util")
+    if not floor or snap.day < pol.get("buy_gate_from_day", 0):
+        return acts, []
+    util = {}
+    for k in (1, 2, 3):
+        ser = snap.series.get(f"S{k}UTIL") or {}
+        vals = [ser[d] for d in sorted(ser)[-2:]]
+        util[k] = sum(vals) / len(vals) if vals else None
+    keep, notes, blocked = [], [], 0
+    for a in acts:
+        if a.kind == "buy" and util.get(a.station) is not None and util[a.station] < floor:
+            blocked += 1
+            notes.append(f"  skip {a}: station {a.station} only {util[a.station]:.0%} busy (2-day avg)")
+            continue
+        keep.append(a)
+    if blocked and not any(a.kind == "buy" for a in keep):
+        dropped = [a for a in keep if a.kind == "loan"]
+        keep = [a for a in keep if a.kind != "loan"]
+        notes += [f"  skip {a}: nothing left to fund" for a in dropped]
+    return keep, notes
+
+
 def kpis(snap) -> str:
     """Yesterday's numbers from the game's own plots, for the log."""
     def last(key):
@@ -290,7 +318,9 @@ def main(client=None, now=None) -> int:
             if pol.get("c3_mode") and "lots" not in snap.controls:
                 pol["c3_mode"] = False   # can't split lots: contract 3 can't hit its 6h quote
                 lines.append("  c3 mode off: no lot-size control on the page")
-            acts = guard(decide(obs, pol), obs, cfg)
+            acts, gnotes = gate_buys(decide(obs, pol), snap, cfg)
+            lines.extend(gnotes)
+            acts = guard(acts, obs, cfg)
             for a in acts:
                 if dry:
                     lines.append(f"  DRY  {a}")
