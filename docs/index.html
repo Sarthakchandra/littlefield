@@ -197,7 +197,7 @@ a { color: var(--cobalt); }
     <div class="loss-plane" id="lossPlane"></div>
     <div class="two">
       <div class="panel"><h3>Lead time against the 6-hour quote</h3><div id="ltChart"></div><div class="legend" id="ltLegend"></div></div>
-      <div class="panel"><h3>Estimated demand against orders accepted</h3><div id="demChart"></div><div class="legend" id="demLegend"></div></div>
+      <div class="panel"><h3>Demand against orders accepted</h3><div id="demChart"></div><div class="legend" id="demLegend"></div></div>
     </div>
   </section>
 
@@ -259,7 +259,7 @@ a { color: var(--cobalt); }
   <footer>
     Data: <a id="srcLink" href="#" target="_blank" rel="noopener">state/dashboard.json</a> in the bot repo, refreshed every minute.
     Desktop alerts work while this tab is open. Email alerts come from the repo's issue #1.
-    Demand is the bot's estimate from days 1 to 50; after day 50 the WIP cap hides real demand.
+    Forecast demand is the bot's curve from days 1 to 50. Implied demand backs out the orders refused at the WIP cap from accepted orders, the cap and lead time (an Erlang loss model).
     The day 300 model assumes no more machine purchases and was within 6% of the final result from day 100 onward in simulated seasons.
   </footer>
 </div>
@@ -332,7 +332,8 @@ function fit(points, fromDay) {
   return { a: my - b * mx, b };
 }
 const lateLoss = (h) => (h.contract === 3 && h.rev != null && h.done != null) ? Math.max(0, C3_PRICE - h.rev) * h.done : null;
-const awayLoss = (h) => (h.demand != null && h.acc != null && h.margin != null) ? Math.max(0, h.demand - h.acc) * h.margin : null;
+const dem = (h) => h.demand_implied ?? h.demand;
+const awayLoss = (h) => (dem(h) != null && h.acc != null && h.margin != null) ? Math.max(0, dem(h) - h.acc) * h.margin : null;
 const kitUse = (h) => 60 * Math.max(h.acc || 0, h.done || 0);
 
 // ---------- render ----------
@@ -387,17 +388,18 @@ function render(D) {
   const tot = (ll || 0) + (al || 0);
   $("lossPlane").innerHTML = `<div><div class="n">${ll == null && al == null ? "–" : fmt$(tot)}</div><div class="k">lost per game day right now</div></div>
     <div><div class="m">${ll == null ? "–" : fmt$(ll)}</div><div class="k">from late jobs: ${L.done ?? "?"} jobs a day at ${L.rev != null ? fmt$(L.rev) : "?"} instead of $1,500. ${fmtK(lateCum)} so far.</div></div>
-    <div><div class="m">${al == null ? "–" : fmt$(al)}</div><div class="k">from orders turned away: about ${L.demand != null && L.acc != null ? Math.max(0, Math.round(L.demand - L.acc)) : "?"} a day at ${L.margin != null ? fmt$(L.margin) : "?"} margin each.${awayCum ? " " + fmtK(awayCum) + " so far." : ""}</div></div>`;
+    <div><div class="m">${al == null ? "–" : fmt$(al)}</div><div class="k">from orders turned away at the WIP cap: about ${dem(L) != null && L.acc != null ? Math.max(0, Math.round(dem(L) - L.acc)) : "?"} a day at ${L.margin != null ? fmt$(L.margin) : "?"} margin each.${awayCum ? " " + fmtK(awayCum) + " so far." : ""}</div></div>`;
   const HL = H.filter((h) => h.lt_h != null && h.contract === 3 && h.rev > 0 && h.lt_h <= 24);
   lineChart($("ltChart"), [{ pts: HL.map((h) => [h.day, h.lt_h]), color: css("--cobalt"), label: L.lt_h != null ? `${L.lt_h.toFixed(1)}h` : "" }],
     { h: 240, aria: "Lead time in hours", yFmt: (v) => v + "h", hlines: [{ y: QUOTE_H, label: "Full pay", color: css("--gain") }, { y: MAX_H, label: "$0", color: css("--loss") }], empty: "Lead time shows once contract 3 is running." });
   legend($("ltLegend"), [[css("--cobalt"), "Average lead time, contract 3 jobs"], [css("--gain"), "6h: full $1,500", true], [css("--loss"), "12h: paid nothing", true]]);
   const HD = H.filter((h) => h.acc != null);
   lineChart($("demChart"), [
-    { pts: H.filter((h) => h.demand != null).map((h) => [h.day, h.demand]), color: css("--s3"), label: "Demand", dash: "5 4" },
+    { pts: H.filter((h) => h.demand != null).map((h) => [h.day, h.demand]), color: css("--s3"), label: "Forecast", dash: "5 4" },
+    { pts: H.filter((h) => h.demand_implied != null).map((h) => [h.day, h.demand_implied]), color: css("--s2"), label: "Implied", w: 1.5 },
     { pts: HD.map((h) => [h.day, h.acc]), color: css("--cobalt"), label: "Accepted", dy: 10 },
   ], { h: 240, aria: "Orders per day", empty: "Waiting for the next bot run." });
-  legend($("demLegend"), [[css("--s3"), "Estimated demand", true], [css("--cobalt"), "Orders accepted per day"]]);
+  legend($("demLegend"), [[css("--s3"), "Forecast demand", true], [css("--s2"), "Implied demand, from refusals at the cap"], [css("--cobalt"), "Orders accepted per day"]]);
 
   // health widget
   const runs = H.filter((h) => h.t).map((h) => Date.parse(h.t)).filter((x) => !isNaN(x));
@@ -415,7 +417,7 @@ function render(D) {
   $("hStats").innerHTML = [
     stat("Usual gap between runs", med != null ? `${med.toFixed(1)} min` : "–", `${runs3h} runs in the last 3 hours`),
     stat("Failed changes, last game day", String(failsDay), failsDay ? "see Failures below" : "every change went through", failsDay ? "bad" : "good"),
-    stat("WIP cap setting", L.wip_mode === "probe" ? "Looser" : L.wip_mode === "safe" ? "Safe" : "–", L.wip_mode ? `price/job ${L.rev2d ? fmt$(L.rev2d) : "–"} over 2 days, floor $1,320` : "contract 3 only"),
+    stat("WIP cap setting", L.wip_mode === "probe" ? "Looser" : L.wip_mode === "safe" ? "Safe" : "–", L.wip_mode ? `price/job ${L.rev2d ? fmt$(L.rev2d) : "–"} over 2 days, floor $1,300` : "contract 3 only"),
     stat("New loans", L.loans_locked ? "Locked" : "Allowed", L.loans_locked ? "repayment has started" : "until repayment starts or day 150"),
   ].join("");
   $("hTicks").innerHTML = H.slice(-49).slice(1).map((h, i, arr) => {
@@ -512,7 +514,7 @@ function render(D) {
     <div class="cap">${cap[i] != null ? cap[i] + " jobs/day" : "capacity n/a"}</div><div class="k">${capE[i] != null && capE[i] !== cap[i] ? `${capE[i]} once orders land` : "no machines in transit"}</div>
     <div class="bar ${u > 0.92 ? "hot" : ""}"><span style="transform:scaleX(${Math.min(1, u || 0)})"></span></div>
     <div class="k">${u != null ? Math.round(u * 100) + "% busy yesterday" : "utilisation n/a"}${q[i] != null ? `, ${q[i]} jobs queued` : ""}</div></div>`; }).join("");
-  $("neckSub").textContent = neck >= 0 ? `${NAMES[neck]} limit us to ${cap[neck]} jobs a day against estimated demand of ${L.demand ?? "?"}. After machines in transit land, the limit is ${Math.min(...capE)} a day (${NAMES[capE.indexOf(Math.min(...capE))].toLowerCase()}). Capacity assumes 90% busy.` : "Capacity in jobs per day at 90% busy. The cobalt card is the station that limits output.";
+  $("neckSub").textContent = neck >= 0 ? `${NAMES[neck]} limit us to ${cap[neck]} jobs a day against demand of about ${dem(L) ?? "?"}. After machines in transit land, the limit is ${Math.min(...capE)} a day (${NAMES[capE.indexOf(Math.min(...capE))].toLowerCase()}). Capacity assumes 90% busy.` : "Capacity in jobs per day at 90% busy. The cobalt card is the station that limits output.";
   const cols = [css("--s1"), css("--s2"), css("--s3")];
   lineChart($("utilChart"), [0, 1, 2].map((i) => ({ pts: H.filter((h) => h.util).map((h) => [h.day, Math.round(h.util[i] * 100)]), color: cols[i], label: NAMES[i], dy: (i - 1) * 10 })),
     { h: 220, aria: "Utilisation by station", yFmt: (v) => v + "%", hlines: [{ y: 92, label: "92%", color: css("--loss") }] });
