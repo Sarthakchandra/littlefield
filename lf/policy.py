@@ -316,7 +316,15 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
         acts.append(Action("rule", cfg["rule"], station=2, reason="config"))
 
     # ---- kits
-    D = 60 * min(f.max_rate(d, d + 5), mu)              # kits/day we will actually consume
+    # Scale the demand curve up to what we actually accept. The curve comes from days 1-50
+    # and last year's shape; if orders run ahead of it (e.g. no drop at day 180), kits
+    # planned off the curve alone would run out, and a stock-out stops the whole factory.
+    jin = s.get("JOBIN", {})
+    recent = [jin[x] for x in sorted(jin)[-3:]]
+    seen = sum(recent) / len(recent) if recent else 0.0
+    base = f.rate(d)
+    kscale = min(10.0, max(1.0, seen / base)) if (base > 1 and cfg.get("kit_follow_orders", True)) else 1.0
+    D = 60 * min(f.max_rate(d, d + 5) * kscale, mu)     # kits/day we will actually consume
     if obs.can_edit_orders and wip_jobs > 0:
         # while the WIP cap is binding we accept roughly what we ship
         pass
@@ -332,7 +340,7 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
         rop = _ceil60(lead * D + cfg["kit_z"] * 60 * math.sqrt(lead * dj))
         roq = _ceil60(max(eoq, (1 + cfg["kit_margin"]) * lead * D))
     # endgame: never buy kits we can't turn into revenue
-    need_rest = sum(60 * min(f.rate(t + 0.5), mu) for t in range(int(d), GAME_END - 1))
+    need_rest = sum(60 * min(f.rate(t + 0.5) * kscale, mu) for t in range(int(d), GAME_END - 1))
     have = obs.inventory + obs.kits_on_order
     endgame = obs.rop <= 60 and d > 200
     if have >= need_rest or (endgame and have >= 0.8 * need_rest):
