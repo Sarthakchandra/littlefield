@@ -26,7 +26,8 @@ policy:
   c3_mode: true           # split each order into 3 lots of 20 and run contract 3 ($1,500, 6h quote)
   target_lots: 3          # flow ~5.2h at lot 20; lot 12 needs too much capital
   c3_wip_days: 0.235      # safe WIP cap: capacity x 0.235 day (cap 14 with 20 stuffers)
-  c3_wip_days_probe: 0.27 # day 128: implied demand ~57/d, ~11 orders/d refused at cap 14 -> cap 16
+  # c3_wip_days_probe removed day 156: cap 16 cycled with cap 14 every ~5 days and averaged
+  # $33.3k/day margin (price $1,297) against $34.8k (price $1,350) at a fixed cap of 14
   c3_min_rev: 1300        # break-even: +4 jobs x $760 = a $61/job price drop on 50 jobs
   buy_min_util: 0.80      # day 108: no new machine at a station under 80% busy (2-day avg); S1 sat at 70%
   buy_gate_from_day: 105  # gate off during the ramp-up: machines must land before demand does
