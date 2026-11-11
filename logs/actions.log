@@ -754,3 +754,6 @@ lf.client.GameError: login failed:  Littlefield Invalid team id or password! Ple
   notify: github issue #1, whatsapp: not set up
 2026-11-11T16:37:30+00:00 day 151.3 cash $327,511 debt $562,776 machines {1: 20, 2: 8, 3: 12} on-order {1: 0, 2: 0, 3: 0} inv 5040 rop/roq 14040/12360 contract 3 wip 16 rule pri4 edits=on | done 46/d c3 lt 5.8h rev $1,381 queued 1 jobs accepted 46/d util 0.78/0.73/0.79 | rank 33/97 (leader $709,153)
   no changes needed
+2026-11-11T16:46:41+00:00 day 151.6 cash $346,785 debt $562,776 machines {1: 20, 2: 8, 3: 12} on-order {1: 0, 2: 0, 3: 0} inv 5040 rop/roq 14040/12360 contract 3 wip 16 rule pri4 edits=on | done 46/d c3 lt 5.8h rev $1,381 queued 1 jobs accepted 46/d util 0.78/0.73/0.79 | rank 30/97 (leader $724,108)
+  OK   repay -> 37585  (debt costs 20%, cash earns 10%) |  Loan Form Littlefield Technologies - CONFIRMATION Processing request... Processing request... Debt was decreased by $37,585. Total debt is now $525,191 
+  notify: github issue #1, whatsapp: not set up
