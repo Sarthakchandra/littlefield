@@ -1,5 +1,5 @@
 {
- "runs": 333,
+ "runs": 334,
  "actions": [
   {
    "ts": "2026-11-09T16:21:39+00:00",
@@ -615,10 +615,15 @@
    "ts": "2026-11-11T17:32:41+00:00",
    "day": 153.19,
    "act": "wip -> 14  (\u03bc 60.4 jobs/d x 0.6d)"
+  },
+  {
+   "ts": "2026-11-11T18:18:38+00:00",
+   "day": 154.79,
+   "act": "repay -> 28193  (debt costs 20%, cash earns 10%)"
   }
  ],
- "last_day": 154.47,
- "last": "2026-11-11T18:09:27+00:00 day 154.5 cash $323,132 debt $489,710 machines {1: 20, 2: 8, 3: 12} on-order {1: 0, 2: 0, 3: 0} inv 9120 rop/roq 14040/12360 contract 3 wip 14 rule pri4 edits=on | done 52/d c3 lt 5.5h rev $1,410 queued 1 jobs accepted 47/d util 0.83/0.81/0.68 | rank 35/97 (leader $740,456)",
+ "last_day": 154.79,
+ "last": "2026-11-11T18:18:38+00:00 day 154.8 cash $337,393 debt $489,710 machines {1: 20, 2: 8, 3: 12} on-order {1: 0, 2: 0, 3: 0} inv 9120 rop/roq 14040/12360 contract 3 wip 14 rule pri4 edits=on | done 52/d c3 lt 5.5h rev $1,410 queued 1 jobs accepted 47/d util 0.83/0.81/0.68 | rank 34/97 (leader $756,456)",
  "notify_issue": 1,
  "wip_probe_off_until": 156.19,
  "repaid": true
