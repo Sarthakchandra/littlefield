@@ -88,6 +88,29 @@ def to_obs(snap) -> Observation:
         can_edit_orders=can_edit, debt=snap.debt)
 
 
+def erlang_b(a: float, k: int) -> float:
+    b = 1.0
+    for i in range(1, k + 1):
+        b = a * b / (i + a * b)
+    return b
+
+
+def implied_demand(accepted: float, cap: int, lead_days: float) -> float | None:
+    """Orders refused at the WIP cap never show up anywhere, so back them out: each job
+    holds one of `cap` slots for about one lead time, which is an Erlang loss system.
+    Solve demand d so that d * (1 - B(d * lead, cap)) = accepted."""
+    if not accepted or not cap or not lead_days:
+        return None
+    lo, hi = accepted, accepted * 4
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if mid * (1 - erlang_b(mid * lead_days, cap)) < accepted:
+            lo = mid
+        else:
+            hi = mid
+    return round((lo + hi) / 2, 1)
+
+
 def kpi_dict(snap) -> dict:
     def last(key):
         ser = snap.series.get(key) or {}
@@ -103,6 +126,11 @@ def kpi_dict(snap) -> dict:
     if all(x is not None for x in u):
         d["util"] = [round(x, 3) for x in u]
     d["q"] = [round((last(f"S{k}Q") or 0) / 60, 1) for k in (1, 2, 3)]
+    jin, jt = snap.series.get("JOBIN") or {}, snap.series.get(f"JOBT_c{snap.contract}") or {}
+    days = [x for x in sorted(jin)[-3:] if jt.get(x)]
+    if days and snap.wip_limit:
+        d["demand_implied"] = implied_demand(sum(jin[x] for x in days) / len(days), snap.wip_limit,
+                                             sum(jt[x] for x in days) / len(days))
     d["kits_on_order"] = snap.kits_on_order
     d["kits_due_in"] = snap.kits_due_in
     if snap.cash_detail:
