@@ -6,6 +6,9 @@ name: littlefield-loop
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "*/20 * * * *"   # watchdog: if the loop ever dies, this starts it again.
+                             # While a loop runs, the concurrency group holds this as pending.
 
 concurrency:
   group: littlefield-bot
