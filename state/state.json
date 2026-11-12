@@ -1,5 +1,5 @@
 {
- "runs": 502,
+ "runs": 503,
  "actions": [
   {
    "ts": "2026-11-09T16:21:39+00:00",
@@ -687,8 +687,8 @@
    "act": "rop -> 11340  (D 2260 kits/d, lead 4d + 1.0d safety)"
   }
  ],
- "last_day": 210.28,
- "last": "2026-11-12T20:56:41+00:00 day 210.3 cash $1,675,616 debt $0 machines {1: 20, 2: 8, 3: 12} on-order {1: 0, 2: 0, 3: 0} inv 8100 rop/roq 11340/10200 contract 3 wip 14 rule pri4 edits=on | done 32/d c3 lt 5.7h rev $1,362 queued 0 jobs accepted 36/d util 0.59/0.51/0.69 | rank 30/97 (leader $2,402,575)",
+ "last_day": 210.59,
+ "last": "2026-11-12T21:05:51+00:00 day 210.6 cash $1,691,708 debt $0 machines {1: 20, 2: 8, 3: 12} on-order {1: 0, 2: 0, 3: 0} inv 8100 rop/roq 11340/10200 contract 3 wip 14 rule pri4 edits=on | done 32/d c3 lt 5.7h rev $1,362 queued 0 jobs accepted 36/d util 0.59/0.51/0.69 | rank 30/97 (leader $2,419,936)",
  "notify_issue": 1,
  "wip_probe_off_until": 156.19,
  "repaid": true
