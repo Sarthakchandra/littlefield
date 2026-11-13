@@ -342,7 +342,7 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
     # endgame: never buy kits we can't turn into revenue
     ref = [jin[x] for x in jin if 228 <= x <= 240]
     holding_up = bool(ref) and seen >= 0.8 * (sum(ref) / len(ref))
-    if cfg.get("kit_end_flat", False) and holding_up:
+    if cfg.get("kit_end_flat", False) and (holding_up or cfg.get("kit_end_flat_always", False)):
         # Last stretch: while orders hold at 80%+ of the day 228-240 level, plan on today's
         # actual rate lasting to the end (never less than the scaled curve). Once demand
         # starts falling like last year's curve, this switches itself off.
