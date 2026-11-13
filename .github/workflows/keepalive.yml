@@ -54,7 +54,9 @@ jobs:
             git push -q || true
             over=$(python -c "import json;print(int((json.load(open('state/state.json')).get('last_day') or 0) >= 300))" 2>/dev/null || echo 0)
             if [ "$over" = "1" ]; then echo "game over"; exit 0; fi
-            sleep 540
+            # last 1.5 game days: run every 2.5 min so the 299.5-299.95 sell-down window gets several tries
+            fast=$(python -c "import json;print(int((json.load(open('state/state.json')).get('last_day') or 0) >= 298.5))" 2>/dev/null || echo 0)
+            if [ "$fast" = "1" ]; then sleep 150; else sleep 540; fi
           done
       - name: Restart the loop
         if: success()
