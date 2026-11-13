@@ -340,7 +340,15 @@ def decide(obs: Observation, cfg: dict | None = None) -> list[Action]:
         rop = _ceil60(lead * D + cfg["kit_z"] * 60 * math.sqrt(lead * dj))
         roq = _ceil60(max(eoq, (1 + cfg["kit_margin"]) * lead * D))
     # endgame: never buy kits we can't turn into revenue
-    need_rest = sum(60 * min(f.rate(t + 0.5) * kscale, mu) for t in range(int(d), GAME_END - 1))
+    ref = [jin[x] for x in jin if 228 <= x <= 240]
+    holding_up = bool(ref) and seen >= 0.8 * (sum(ref) / len(ref))
+    if cfg.get("kit_end_flat", False) and holding_up:
+        # Last stretch: while orders hold at 80%+ of the day 228-240 level, plan on today's
+        # actual rate lasting to the end (never less than the scaled curve). Once demand
+        # starts falling like last year's curve, this switches itself off.
+        need_rest = sum(60 * min(max(f.rate(t + 0.5) * kscale, seen), mu) for t in range(int(d), GAME_END - 1))
+    else:
+        need_rest = sum(60 * min(f.rate(t + 0.5) * kscale, mu) for t in range(int(d), GAME_END - 1))
     have = obs.inventory + obs.kits_on_order
     endgame = obs.rop <= 60 and d > 200
     if have >= need_rest or (endgame and have >= 0.8 * need_rest):
