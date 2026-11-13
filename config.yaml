@@ -31,6 +31,8 @@ policy:
   c3_min_rev: 1300        # break-even: +4 jobs x $760 = a $61/job price drop on 50 jobs
   buy_min_util: 0.80      # day 108: no new machine at a station under 80% busy (2-day avg); S1 sat at 70%
   buy_gate_from_day: 105  # gate off during the ramp-up: machines must land before demand does
+  kit_end_flat: true      # day 237: plan the last kit orders on the live order rate, not last year's fall to zero
+  kit_end_flat_always: true # demand steps down at ~250 then holds: +$70k vs curve, at most -$20k if it keeps falling
   max_machines: 40
   no_edit_mode: hold      # if contract/WIP never become editable: stop buying kits, keep cash
   hold_after_day: 55
